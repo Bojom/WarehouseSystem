@@ -1,18 +1,23 @@
+// backend/src/app.js
+
 // 1. 引入我们安装的依赖库
 require('dotenv').config(); // 这行代码必须在最前面，确保环境变量被加载
 const express = require('express');
-const { Sequelize } = require('sequelize');
+const sequelize = require('./config/db.config.js');
 const cors = require('cors') //intégration de cors
+const userRoutes = require('./routes/user.routes.js');
+const partsRoutes = require('./routes/parts.routes.js');
 
 // 2. 初始化 Express 应用
 const app = express();
 
 app.use(cors());//utilisation de cors
+app.use(express.json());
 
 const PORT = process.env.PORT || 3001; // 从.env文件读取端口，如果没有则使用3001
 
 // 3. 配置数据库连接 (使用Sequelize)
-const sequelize = new Sequelize(
+/*const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
   process.env.DB_PASSWORD,
@@ -20,7 +25,7 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     dialect: 'postgres' // 告诉Sequelize我们用的是PostgreSQL
   }
-);
+);*/
 
 // 4. 定义一个函数来测试数据库连接
 const testDbConnection = async () => {
@@ -41,6 +46,9 @@ app.get('/', (req, res) => {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Hello from the Backend! Connection successful.' });
 });
+
+app.use('/api/users', userRoutes); //utilisation de routes pour user
+app.use('/api/parts', partsRoutes);
 
 // 6. 启动服务器并测试数据库连接
 app.listen(PORT, () => {
