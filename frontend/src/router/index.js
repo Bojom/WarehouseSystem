@@ -7,86 +7,62 @@ import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import PartsView from '../views/PartsView.vue'
 import RecordsView from '../views/RecordsView.vue'
+import MainLayout from '../layouts/MainLayout.vue' // 1. 导入 MainLayout
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  // 定义路由规则
   routes: [
+    // 不需要布局的页面
     {
-      path: '/',
+      path: '/login',
       name: 'login',
       component: LoginView
     },
+    // 需要统一布局的页面
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: DashboardView
-    },
-    {
-      path: '/parts',
-      name: 'parts',
-      component: PartsView
-    },
-    {
-      path: '/records',
-      name: 'records',
-      component: RecordsView
+      path: '/',
+      component: MainLayout, // 2. 使用 MainLayout 作为根组件
+      redirect: '/dashboard',
+      children: [
+        {
+          path: 'dashboard',
+          name: 'dashboard',
+          component: DashboardView,
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'parts',
+          name: 'parts',
+          component: PartsView,
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'records',
+          name: 'records',
+          component: RecordsView,
+          meta: { requiresAuth: true }
+        }
+      ]
     }
   ]
 })
+
 // 全局前置导航守卫
 router.beforeEach((to, from, next) => {
-  // to: 即将要进入的目标路由对象
-  // from: 当前导航正要离开的路由对象
-  // next: 一个必须执行的函数，决定导航的行为
+  const isAuthenticated = !!localStorage.getItem('token');
 
-  const isAuthenticated = !!localStorage.getItem('token'); // 检查是否存在token
-
-  // 检查目标路径是否需要认证
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-
-  if (requiresAuth && !isAuthenticated) {
-    // 如果此路由需要认证，但用户未认证
-    next({ name: 'login' }); // 重定向到登录页
-  } else if (to.name === 'login' && isAuthenticated) {
-    // 如果用户已认证，但试图访问登录页，则重定向到仪表盘
+  // 如果目标路由不是 'login' 并且用户未认证，则重定向到登录页
+  if (to.name !== 'login' && !isAuthenticated) {
+    next({ name: 'login' });
+  }
+  // 如果用户已认证，但试图访问登录页，则重定向到仪表盘
+  else if (to.name === 'login' && isAuthenticated) {
     next({ name: 'dashboard' });
-  } else {
-    // 其他情况，正常放行
+  }
+  // 其他情况，正常放行
+  else {
     next();
   }
 });
 
-const routes = [
-  {
-    path: '/login', // 登录页不需要认证
-    name: 'login',
-    component: LoginView
-  },
-  {
-    path: '/dashboard',
-    name: 'dashboard',
-    component: DashboardView,
-    meta: { requiresAuth: true } // <-- 添加这个 meta 字段
-  },
-  {
-    path: '/parts',
-    name: 'parts',
-    component: PartsView,
-    meta: { requiresAuth: true } // <-- 添加这个 meta 字段
-  },
-  {
-    path: '/records',
-    name: 'records',
-    component: RecordsView,
-    meta: { requiresAuth: true } // <-- 添加这个 meta 字段
-  },
-  // 添加一个根路径重定向，如果用户已登录则去dashboard，否则去login
-  {
-    path: '/',
-    redirect: () => {
-      return localStorage.getItem('token') ? '/dashboard' : '/login';
-    }
-  }
-];
 export default router

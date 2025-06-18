@@ -2,14 +2,24 @@
 
 // 1. 引入我们安装的依赖库
 require('dotenv').config(); // 这行代码必须在最前面，确保环境变量被加载
+
 const express = require('express');
 const sequelize = require('./config/db.config.js');
 const cors = require('cors') //intégration de cors
 const userRoutes = require('./routes/user.routes.js');
 const partsRoutes = require('./routes/parts.routes.js');
+const supplierRoutes = require('./routes/supplier.routes.js');
+
 
 // 2. 初始化 Express 应用
 const app = express();
+
+// --- ESPION DE REQUÊTE ---
+app.use((req, res, next) => {
+  console.log(`[REQUÊTE REÇUE] Méthode: ${req.method}, URL: ${req.originalUrl}, Heure: ${new Date().toISOString()}`);
+  next();
+});
+// --------------------------
 
 app.use(cors());//utilisation de cors
 app.use(express.json());
@@ -49,6 +59,7 @@ app.get('/api/test', (req, res) => {
 
 app.use('/api/users', userRoutes); //utilisation de routes pour user
 app.use('/api/parts', partsRoutes);
+app.use('/api/suppliers', supplierRoutes);
 
 // 6. 启动服务器并测试数据库连接
 app.listen(PORT, () => {

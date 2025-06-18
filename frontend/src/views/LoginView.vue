@@ -48,6 +48,7 @@ import { ref } from 'vue';
 import api from '@/utils/api.js';
 import { useRouter } from 'vue-router'; // 引入 Vue Router 的 useRouter
 import { ElMessage } from 'element-plus'; // 引入 Element Plus 的消息提示组件
+import { useUserStore } from '@/stores/user';
 
 // --- 数据和引用 ---
 const loginForm = ref({
@@ -56,6 +57,8 @@ const loginForm = ref({
 });
 const loginFormRef = ref(null);
 const router = useRouter(); // 获取 router 实例，用于页面跳转
+
+const userStore = useUserStore();
 
 // --- 验证规则 ---
 const loginRules = {
@@ -75,20 +78,20 @@ const handleLogin = async () => {
     if (valid) {
       // --- 任务1: 实现API请求 ---
       try {
-        // 发送 POST 请求到后端登录接口
-        //const response = await axios.post('http://localhost:3001/api/users/login', loginForm.value);
         const response = await api.post('/users/login', loginForm.value);
+        const token = response.data.token;
+
+        // 1. Set the token in the store
+        userStore.setToken(token);
+
+        // 2. Fetch user profile
+        await userStore.fetchUser();
 
         // --- 任务2: 处理成功的响应 ---
-        console.log('登录成功，响应数据:', response.data);
-
         // 1. 显示成功消息
         ElMessage.success('登录成功！');
 
-        // 2. 将后端返回的 token 存储到浏览器的 localStorage 中
-        localStorage.setItem('token', response.data.token);
-
-        // 3. 跳转到仪表盘页面
+        // 2. 跳转到仪表盘页面
         router.push('/dashboard');
 
       } catch (error) {
