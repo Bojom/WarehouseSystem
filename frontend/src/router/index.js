@@ -8,6 +8,7 @@ import DashboardView from '../views/DashboardView.vue'
 import PartsView from '../views/PartsView.vue'
 import RecordsView from '../views/RecordsView.vue'
 import MainLayout from '../layouts/MainLayout.vue' // 1. 导入 MainLayout
+import StockMovementView from '../views/StockMovementView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -41,6 +42,12 @@ const router = createRouter({
           name: 'records',
           component: RecordsView,
           meta: { requiresAuth: true }
+        },
+        {
+          path: 'stock-movement',
+          name: 'stock-movement',
+          component: StockMovementView,
+          meta: { requiresAuth: true, roles: ['admin', 'operator'] }
         }
       ]
     }

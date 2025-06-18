@@ -37,3 +37,12 @@ export const updatePart = (id, partData) => {
 export const deletePart = (id) => {
   return api.delete(`/parts/${id}`);
 };
+
+/**
+ * 根据配件编号获取配件信息
+ * @param {string} partNumber
+ * @returns {Promise}
+ */
+export const getPartByNumber = (partNumber) => {
+  return api.get(`/parts/by-number/${partNumber}`);
+};

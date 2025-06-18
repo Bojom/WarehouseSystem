@@ -9,7 +9,7 @@ const cors = require('cors') //intégration de cors
 const userRoutes = require('./routes/user.routes.js');
 const partsRoutes = require('./routes/parts.routes.js');
 const supplierRoutes = require('./routes/supplier.routes.js');
-
+const transactionRoutes = require('./routes/transaction.routes.js');
 
 // 2. 初始化 Express 应用
 const app = express();
@@ -60,6 +60,7 @@ app.get('/api/test', (req, res) => {
 app.use('/api/users', userRoutes); //utilisation de routes pour user
 app.use('/api/parts', partsRoutes);
 app.use('/api/suppliers', supplierRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // 6. 启动服务器并测试数据库连接
 app.listen(PORT, () => {

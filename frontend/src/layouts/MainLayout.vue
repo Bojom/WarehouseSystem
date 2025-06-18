@@ -16,6 +16,10 @@
           <el-icon><i-ep-setting /></el-icon>
           <span>配件管理 (Parts)</span>
         </el-menu-item>
+        <el-menu-item index="/stock-movement">
+          <el-icon><i-ep-sort /></el-icon>
+          <span>出入库登记 (Stock Movement)</span>
+        </el-menu-item>
         <el-menu-item index="/records">
           <el-icon><i-ep-document /></el-icon>
           <span>出入库记录 (Records)</span>

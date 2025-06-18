@@ -87,6 +87,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/parts/by-number/:partNumber - 按编号查找单个配件
+router.get('/by-number/:partNumber', async (req, res) => {
+  try {
+    const part = await Part.findOne({ 
+      where: { part_number: req.params.partNumber }
+    });
+    if (part) {
+      res.json(part);
+    } else {
+      res.status(404).json({ message: 'Part not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching part by number', error: error.message });
+  }
+});
+
 // GET /api/parts/:id - 获取单个配件详情
 router.get('/:id', async (req, res) => {
   try {
