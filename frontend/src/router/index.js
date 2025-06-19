@@ -5,6 +5,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 // 1. 导入创建的页面组件
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
+import InventoryView from '../views/InventoryView.vue'
 import PartsView from '../views/PartsView.vue'
 import RecordsView from '../views/RecordsView.vue'
 import MainLayout from '../layouts/MainLayout.vue' // 1. 导入 MainLayout
@@ -32,7 +33,13 @@ const router = createRouter({
           meta: { requiresAuth: true }
         },
         {
-          path: 'parts',
+          path: '/inventory',
+          name: 'inventory',
+          component: InventoryView,
+          meta: { requiresAuth: true }
+        },
+        {
+          path: '/parts',
           name: 'parts',
           component: PartsView,
           meta: { requiresAuth: true }

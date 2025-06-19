@@ -12,6 +12,10 @@
           <el-icon><i-ep-data-analysis /></el-icon>
           <span>仪表盘 (Dashboard)</span>
         </el-menu-item>
+        <el-menu-item index="/inventory">
+          <el-icon><i-ep-pie-chart /></el-icon>
+          <span>库存概览 (Inventory)</span>
+        </el-menu-item>
         <el-menu-item index="/parts">
           <el-icon><i-ep-setting /></el-icon>
           <span>配件管理 (Parts)</span>

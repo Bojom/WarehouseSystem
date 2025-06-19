@@ -1,6 +1,6 @@
 <!-- frontend/src/components/PartForm.vue -->
 <template>
-  <el-form ref="formRef" :model="form" :rules="rules" label-width="150px">
+  <el-form ref="formRef" :model="form" :rules="rules" label-width="200px">
     <el-form-item label="配件编号 (Part Number)" prop="part_number">
       <el-input v-model="form.part_number" placeholder="请输入配件编号 (Enter Part Number)"></el-input>
     </el-form-item>

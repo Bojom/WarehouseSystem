@@ -10,7 +10,8 @@ const userRoutes = require('./routes/user.routes.js');
 const partsRoutes = require('./routes/parts.routes.js');
 const supplierRoutes = require('./routes/supplier.routes.js');
 const transactionRoutes = require('./routes/transaction.routes.js');
-
+const inventoryRoutes = require('./routes/inventory.routes.js');
+const dashboardRoutes = require('./routes/dashboard.routes.js');
 // 2. 初始化 Express 应用
 const app = express();
 
@@ -61,6 +62,8 @@ app.use('/api/users', userRoutes); //utilisation de routes pour user
 app.use('/api/parts', partsRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // 6. 启动服务器并测试数据库连接
 app.listen(PORT, () => {

@@ -34,10 +34,7 @@ a,
 /* --- FORM LAYOUT FIX --- */
 /* Resetting form item display to ensure proper alignment */
 .el-form-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 22px; /* Standard Element Plus margin */
+  display: flex !important;
 }
 
 .el-form-item .el-form-item__label {
@@ -52,7 +49,7 @@ a,
 }
 
 .el-form-item .el-form-item__content {
-  flex: 1;
+  flex-grow: 1;
   line-height: 40px;
   position: relative;
   font-size: 14px;

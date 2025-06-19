@@ -28,7 +28,7 @@
         :data="partsList"
         style="width: 100%"
       >
-        <el-table-column prop="part_number" label="配件编号 (Part Number)" width="180" />
+        <el-table-column prop="part_number" label="配件编号 (Part Number)" width="300" />
         <el-table-column prop="part_name" label="配件名称 (Part Name)" width="180" />
         <el-table-column prop="spec" label="规格 (Specification)" />
         <el-table-column prop="stock" label="当前库存 (Stock)" />
