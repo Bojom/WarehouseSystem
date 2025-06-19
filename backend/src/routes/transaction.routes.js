@@ -58,7 +58,7 @@ router.post('/', protect, async (req, res) => {
       const newTransaction = await Transaction.create({
         part_id,
         user_id,
-        trans_type,
+        trans_type: trans_type,
         quantity,
         remarks
       }, { transaction: t });
@@ -127,6 +127,7 @@ router.get('/', protect, async (req, res) => {
       const plainRow = row.get({ plain: true });
       return {
         ...plainRow,
+        type: plainRow.trans_type, // 添加 type 字段给前端使用
         transaction_time: plainRow.trans_time // 添加 transaction_time 字段
       };
     });

@@ -27,15 +27,30 @@
         v-loading="loading"
         :data="partsList"
         style="width: 100%"
+        @expand-change="handleExpandChange"
+        row-key="id"
       >
+        <el-table-column type="expand">
+          <template #default="props">
+            <div class="expand-content">
+              <h4>{{ props.row.part_name }} - 最近30天出入库趋势</h4>
+              <BaseChart
+                v-if="props.row.chartOption"
+                :option="props.row.chartOption"
+                height="300px"
+              />
+              <div v-else>正在加载图表数据...</div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="part_number" label="配件编号 (Part Number)" width="300" />
         <el-table-column prop="part_name" label="配件名称 (Part Name)" width="180" />
         <el-table-column prop="spec" label="规格 (Specification)" />
         <el-table-column prop="stock" label="当前库存 (Stock)" />
         <el-table-column prop="Supplier.supplier_name" label="供应商 (Supplier)" />
-        <el-table-column label="操作 (Actions)" width="180">
+        <el-table-column label="操作 (Actions)" width="200">
           <template #default="scope">
-            <div v-if="userStore.isAdmin">
+            <div class="action-buttons" v-if="userStore.isAdmin">
               <el-button size="small" @click="handleOpenEditDialog(scope.row)">编辑 (Edit)</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除 (Delete)</el-button>
             </div>
@@ -88,12 +103,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, reactive } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useUserStore } from '@/stores/user';
 import PartForm from '@/components/PartForm.vue';
+import BaseChart from '@/components/charts/BaseChart.vue';
 import { getParts, createPart, updatePart, deletePart } from '@/api/part.api.js';
 import { getSuppliers } from '@/api/supplier.api.js';
+import api from '@/utils/api'; // Import the generic api utility
 
 // --- 状态管理 ---
 const partsList = ref([]); // 存储配件列表
@@ -239,6 +256,50 @@ const handlePageChange = (newPage) => {
   fetchParts();
 };
 
+const handleExpandChange = async (row, expandedRows) => {
+  const isExpanded = expandedRows.some(r => r.id === row.id);
+
+  if (isExpanded && !row.chartOption) {
+    try {
+      const response = await api.get(`/parts/${row.id}/history`);
+      const { dates, inboundData, outboundData } = response.data;
+      row.chartOption = createTrendChartOption(dates, inboundData, outboundData);
+    } catch (error) {
+      console.error('获取配件历史数据失败:', error);
+      ElMessage.error('无法加载趋势图');
+    }
+  }
+};
+
+const createTrendChartOption = (dates, inData, outData) => {
+  return reactive({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['入库量', '出库量'] },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: dates,
+    },
+    yAxis: { type: 'value' },
+    series: [
+      {
+        name: '入库量',
+        type: 'line',
+        data: inData,
+        smooth: true,
+        areaStyle: {},
+      },
+      {
+        name: '出库量',
+        type: 'line',
+        data: outData,
+        smooth: true,
+        areaStyle: {},
+      },
+    ],
+  });
+};
 
 // --- 生命周期钩子 ---
 onMounted(async () => {
@@ -259,5 +320,12 @@ onMounted(async () => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+.expand-content {
+  padding: 20px 50px;
+}
+.action-buttons {
+  display: flex;
+  justify-content: flex-start;
 }
 </style>

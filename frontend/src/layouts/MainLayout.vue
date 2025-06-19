@@ -36,8 +36,8 @@
       <el-header class="header">
         <div>面包屑导航 (Breadcrumb)</div>
         <div class="user-info">
-          <span>欢迎, admin</span>
-          <el-button type="danger" plain>退出登录 (Logout)</el-button>
+          <span>欢迎, {{ userStore.user?.user_name || '用户' }}</span>
+          <el-button type="danger" plain @click="handleLogout">退出登录 (Logout)</el-button>
         </div>
       </el-header>
 
@@ -50,7 +50,16 @@
 </template>
 
 <script setup>
-// 如果需要，可以在这里添加逻辑，例如处理退出登录
+import { useRouter } from 'vue-router';
+import { useUserStore } from '@/stores/user';
+
+const router = useRouter();
+const userStore = useUserStore();
+
+const handleLogout = () => {
+  userStore.logout();
+  router.push('/login');
+};
 </script>
 
 <style scoped>

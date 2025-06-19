@@ -11,6 +11,8 @@ const { Op } = require('sequelize'); // 引入 Sequelize 的操作符，用于 L
 const Part = require('../models/part.model');
 const Supplier = require('../models/supplier.model'); // 引入Supplier以便包含其信息
 const { protect } = require('../middleware/auth.middleware');
+const Transaction = require('../models/transaction.model'); // 引入Transaction模型
+const sequelize = require('../config/db.config'); // 引入sequelize实例
 
 // Définir un middleware de vérification des permissions d'administrateur
 const isAdmin = (req, res, next) => {
@@ -68,7 +70,7 @@ router.get('/', async (req, res) => {
       where: whereCondition,
       include: [{ // 关键：包含关联的供应商信息
         model: Supplier,
-        attributes: ['id', 'name'] // 只选择需要的供应商字段
+        attributes: ['id', 'supplier_name'] // Corrected from 'name' to 'supplier_name'
       }],
       limit,
       offset,
@@ -116,6 +118,52 @@ router.get('/:id', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: 'Error fetching part', error: error.message });
+  }
+});
+
+// GET /api/parts/:id/history - 获取单个配件的出入库历史
+router.get('/:id/history', protect, async (req, res) => {
+  try {
+    const partId = req.params.id;
+    const days = parseInt(req.query.days || 30, 10);
+
+    const query = `
+      WITH date_series AS (
+        SELECT generate_series(
+          (CURRENT_DATE - make_interval(days => :days - 1)),
+          CURRENT_DATE,
+          '1 day'
+        )::date AS report_date
+      )
+      SELECT
+        ds.report_date::text,
+        COALESCE(SUM(t.quantity) FILTER (WHERE t.trans_type = 'IN'), 0) AS inbound_total,
+        COALESCE(SUM(t.quantity) FILTER (WHERE t.trans_type = 'OUT'), 0) AS outbound_total
+      FROM
+        date_series ds
+      LEFT JOIN
+        transactions t ON ds.report_date = t.trans_time::date AND t.part_id = :partId
+      GROUP BY
+        ds.report_date
+      ORDER BY
+        ds.report_date;
+    `;
+
+    const results = await sequelize.query(query, {
+      replacements: { days, partId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    // The data is already perfectly formatted. We just extract it into the arrays for ECharts.
+    const dates = results.map(row => row.report_date);
+    const inboundData = results.map(row => parseInt(row.inbound_total, 10));
+    const outboundData = results.map(row => parseInt(row.outbound_total, 10));
+
+    res.json({ dates, inboundData, outboundData });
+
+  } catch (error) {
+    console.error(`Error fetching history for part ${req.params.id}:`, error);
+    res.status(500).json({ message: 'Error fetching part history' });
   }
 });
 
