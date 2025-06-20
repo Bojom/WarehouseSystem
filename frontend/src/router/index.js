@@ -10,6 +10,7 @@ import PartsView from '../views/PartsView.vue'
 import RecordsView from '../views/RecordsView.vue'
 import MainLayout from '../layouts/MainLayout.vue' // 1. 导入 MainLayout
 import StockMovementView from '../views/StockMovementView.vue'
+import SupplierView from '../views/SupplierView.vue'; // Import the new view
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -55,6 +56,12 @@ const router = createRouter({
           name: 'stock-movement',
           component: StockMovementView,
           meta: { requiresAuth: true, roles: ['admin', 'operator'] }
+        },
+        {
+          path: 'suppliers',
+          name: 'suppliers',
+          component: SupplierView,
+          meta: { requiresAuth: true, roles: ['admin'] } // Only admins can see this
         }
       ]
     }

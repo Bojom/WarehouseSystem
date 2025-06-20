@@ -36,22 +36,24 @@ router.post('/', protect, async (req, res) => {
 
       let newQuantity;
       // 2. 逻辑校验与库存计算
-      if (trans_type === 'OUT') {
+      if (trans_type === 'IN') {
+        part.stock += quantity;
+      } else if (trans_type === 'OUT' || trans_type === 'FAULT') { // Allow 'FAULT' type
+        // Check for sufficient stock for both OUT and FAULT
         if (part.stock < quantity) {
-          console.error(`  [DB-TX] Error: Insufficient stock. Have ${part.stock}, need ${quantity}`);
-          // 库存不足，手动抛出错误，事务将回滚
-          throw new Error('库存不足，无法出库');
+          const message = trans_type === 'OUT' ? '库存不足，无法出库' : '库存不足，无法报废';
+          // No need to manually rollback, throwing an error will do it
+          throw new Error(message);
         }
-        newQuantity = part.stock - quantity;
-      } else if (trans_type === 'IN') {
-        newQuantity = part.stock + quantity;
+        part.stock -= quantity;
       } else {
+        // No need to manually rollback, throwing an error will do it
         throw new Error('无效的操作类型');
       }
       
       // 3. 更新配件表中的库存
-      console.log(`  [DB-TX] Updating stock for part ${part.id} to ${newQuantity}`);
-      await part.update({ stock: newQuantity }, { transaction: t });
+      console.log(`  [DB-TX] Updating stock for part ${part.id} to ${part.stock}`);
+      await part.update({ stock: part.stock }, { transaction: t });
 
       // 4. 在 transactions 表中创建一条新记录
       console.log('  [DB-TX] Creating transaction record...');
@@ -74,7 +76,60 @@ router.post('/', protect, async (req, res) => {
   } catch (error) {
     // 如果事务中任何地方抛出错误，或者发生数据库错误，都会被这里捕获
     console.error('[TRANSACTION FAILED] Error caught, rolling back.', error);
-    res.status(400).json({ message: '操作失败', error: error.message });
+    // 检查错误是否是我们的自定义业务逻辑错误
+    if (error.message.includes('库存不足') || error.message.includes('无效的操作类型')) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: '操作失败', error: error.message });
+  }
+});
+
+// POST /api/transactions/fault - 创建一个新的故障事务
+router.post('/fault', protect, async (req, res) => {
+  const { part_id, quantity, remarks } = req.body;
+  const user_id = req.user.id;
+
+  console.log(`[FAULT TRANSACTION START] User ${user_id}: reporting ${quantity} of part ${part_id} as faulty`);
+
+  try {
+    const result = await sequelize.transaction(async (t) => {
+      const part = await Part.findByPk(part_id, {
+        lock: t.LOCK.UPDATE,
+        transaction: t
+      });
+
+      if (!part) {
+        throw new Error('配件不存在');
+      }
+
+      if (part.stock < quantity) {
+        throw new Error('库存不足，无法报告故障');
+      }
+      
+      part.stock -= quantity;
+
+      await part.save({ transaction: t });
+
+      const newTransaction = await Transaction.create({
+        part_id,
+        user_id,
+        trans_type: 'FAULT',
+        quantity,
+        remarks
+      }, { transaction: t });
+      
+      return newTransaction;
+    });
+
+    console.log('[FAULT TRANSACTION SUCCESS] Transaction committed successfully.');
+    res.status(201).json({ message: '故障提报成功', transaction: result });
+
+  } catch (error) {
+    console.error('[FAULT TRANSACTION FAILED] Error caught, rolling back.', error);
+    if (error.message.includes('库存不足') || error.message.includes('配件不存在')) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: '操作失败', error: error.message });
   }
 });
 
@@ -170,9 +225,9 @@ router.get('/export', protect, async (req, res) => {
       where: whereCondition,
       include: [
         { model: Part, attributes: ['part_number', 'part_name'] },
-        { model: User, attributes: ['user_name'] } // Corrected: username -> user_name
+        { model: User, attributes: [['user_name', 'username']] }
       ],
-      order: [['trans_time', 'ASC']] // Corrected: transaction_time -> trans_time
+      order: [['trans_time', 'ASC']]
     });
 
     // 3. 动态生成文件名
@@ -215,12 +270,12 @@ router.get('/export', protect, async (req, res) => {
     // 5. 填充数据
     transactions.forEach(t => {
       worksheet.addRow({
-        time: t.trans_time, // Corrected: transaction_time -> trans_time
+        time: t.trans_time,
         p_num: t.Part?.part_number,
         p_name: t.Part?.part_name,
-        type: t.trans_type === 'IN' ? '入库' : '出库', // Corrected: type -> trans_type
+        type: t.trans_type === 'IN' ? '入库' : '出库',
         qty: t.quantity,
-        user: t.User?.user_name, // Corrected: username -> user_name
+        user: t.User?.username,
         remarks: t.remarks
       });
     });
@@ -231,7 +286,6 @@ router.get('/export', protect, async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFileName}`);
 
     await workbook.xlsx.write(res);
-    res.end();
 
   } catch (error) {
     console.error('Export failed:', error);

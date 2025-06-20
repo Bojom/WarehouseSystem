@@ -120,74 +120,53 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-router.get('/stock-composition', protect, async (req, res) => {
+// --- Defective Parts by Supplier ---
+// GET /api/dashboard/defective-summary
+router.get('/defective-summary', async (req, res) => {
   try {
-    const stockComposition = await Part.findAll({
+    const defectSummary = await Transaction.findAll({
+      where: { trans_type: 'DEFECT' },
       attributes: [
-        // 使用 sequelize.fn 来调用数据库的聚合函数 SUM
-        [sequelize.fn('SUM', sequelize.col('stock')), 'total_stock'] 
+        [sequelize.fn('SUM', sequelize.col('quantity')), 'total_defects'],
       ],
       include: [{
-        model: Supplier,
-        attributes: ['supplier_name'], // We need to group by supplier name
-        required: true // Ensure we only return parts that have a supplier
+        model: Part,
+        attributes: ['id', 'part_name'],
+        include: [{
+          model: Supplier,
+          attributes: ['id', 'supplier_name'],
+        }]
       }],
-      group: ['Supplier.id', 'Supplier.supplier_name'], // Group by supplier ID and name
-      raw: true // Get raw data for easier processing
+      group: ['Part.id', 'Part->Supplier.id'],
+      order: [[sequelize.fn('SUM', sequelize.col('quantity')), 'DESC']],
+      raw: true, // Get plain JSON results
     });
-    
-    // Format the result for the ECharts pie chart
-    const formattedData = stockComposition.map(item => ({
-      value: parseInt(item.total_stock, 10),
-      name: item['Supplier.supplier_name']
+
+    // Remap results for a cleaner structure
+    const results = defectSummary.map(item => ({
+      supplier_id: item['Part.Supplier.id'],
+      supplier_name: item['Part.Supplier.supplier_name'],
+      total_defects: parseInt(item.total_defects, 10),
     }));
 
-    res.json(formattedData);
-  } catch (error) {
-    console.error('Failed to fetch stock composition data:', error);
-    res.status(500).json({ message: 'Error fetching stock composition data' });
-  }
-});
-
-// GET /api/dashboard/stock-status-summary - 获取库存状态统计
-router.get('/stock-status-summary', protect, async (req, res) => {
-  try {
-    // 使用 sequelize.fn 和 group 来高效地进行分类计数
-    const statusCounts = await Part.findAll({
-      attributes: [
-        [
-          sequelize.literal(`
-            CASE
-              WHEN stock < stock_min THEN 'low_stock'
-              WHEN stock > stock_max THEN 'over_stock'
-              ELSE 'normal'
-            END
-          `),
-          'status'
-        ],
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-      ],
-      group: ['status'],
-      raw: true
-    });
-
-    // 将结果格式化为 { low: ..., normal: ..., over: ... }
-    const result = {
-      low_stock: 0,
-      normal: 0,
-      over_stock: 0,
-    };
-
-    statusCounts.forEach(item => {
-      if (result.hasOwnProperty(item.status)) {
-        result[item.status] = parseInt(item.count, 10);
+    // Aggregate results by supplier
+    const finalSummary = results.reduce((acc, current) => {
+      const existing = acc.find(item => item.supplier_id === current.supplier_id);
+      if (existing) {
+        existing.total_defects += current.total_defects;
+      } else {
+        acc.push({ ...current });
       }
-    });
+      return acc;
+    }, []);
     
-    res.json(result);
+    // Sort final summary
+    finalSummary.sort((a, b) => b.total_defects - a.total_defects);
+
+    res.json(finalSummary);
   } catch (error) {
-    console.error('Failed to fetch stock status summary:', error);
-    res.status(500).json({ message: 'Error fetching stock status summary' });
+    console.error('Error fetching defective summary:', error);
+    res.status(500).json({ message: 'Error fetching defective summary', error: error.message });
   }
 });
 

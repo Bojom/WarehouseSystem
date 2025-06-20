@@ -71,15 +71,20 @@
         </el-card>
       </el-col>
 
-      <!-- 新增：库存占比饼图 -->
+      <!-- 新增：库存占比饼图 (this section will be removed) -->
+
+    </el-row>
+
+    <!-- 新增：缺陷供应商排行 -->
+    <el-row :gutter="20">
       <el-col :span="12">
         <el-card class="chart-section">
-          <template #header>
+           <template #header>
             <div class="card-header">
-              <span>库存占比 (按供应商)</span>
+              <span>缺陷供应商排行 (Top Defective Suppliers)</span>
             </div>
           </template>
-          <BaseChart :option="compositionChartOption" :loading="compositionChartLoading" height="350px" />
+          <BaseChart :option="defectChartOption" :loading="defectChartLoading" height="350px" />
         </el-card>
       </el-col>
     </el-row>
@@ -116,7 +121,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import {
   createTrendChartOption,
-  createCompositionChartOption
+  createDefectChartOption
 } from '@/utils/chart-options.js';
 
 const exportAreaRef = ref(null);
@@ -124,11 +129,11 @@ const isExporting = ref(false);
 const dashboardData = ref(null);
 const loading = ref(true);
 const trendChartLoading = ref(false);
-const compositionChartLoading = ref(false);
 const statusChartLoading = ref(false);
+const defectChartLoading = ref(false);
 
 const trendChartOption = reactive(createTrendChartOption());
-const compositionChartOption = reactive(createCompositionChartOption());
+const defectChartOption = reactive(createDefectChartOption());
 
 const statusChartOption = reactive({
   tooltip: { trigger: 'axis' },
@@ -186,31 +191,33 @@ const fetchTrendsData = async () => {
   }
 };
 
-const fetchCompositionData = async () => {
-  compositionChartLoading.value = true;
-  try {
-    const response = await api.get('/dashboard/stock-composition');
-    const newOptions = createCompositionChartOption(response.data);
-    compositionChartOption.series[0].data = newOptions.series[0].data;
-  } catch (error) {
-    console.error('获取库存构成数据失败:', error);
-  } finally {
-    compositionChartLoading.value = false;
-  }
-};
-
-const fetchStatusSummaryData = async () => {
+const fetchStockStatusData = async () => {
   statusChartLoading.value = true;
   try {
-    const response = await api.get('/dashboard/stock-status-summary');
-    const { low_stock, normal, over_stock } = response.data;
-    statusChartOption.series[0].data = [low_stock, normal, over_stock];
+    const response = await api.get('/dashboard/stock-status');
+    const { lowStock, normalStock, overStock } = response.data;
+    statusChartOption.series[0].data = [lowStock, normalStock, overStock];
   } catch (error) {
-    console.error('获取库存状态统计失败:', error);
+    console.error('获取库存状态数据失败:', error);
   } finally {
     statusChartLoading.value = false;
   }
-};
+}
+
+const fetchDefectData = async () => {
+  defectChartLoading.value = true;
+  try {
+    const response = await api.get('/dashboard/top-defective-suppliers');
+    const { supplierNames, defectCounts } = response.data;
+    const newOptions = createDefectChartOption(supplierNames, defectCounts);
+    defectChartOption.xAxis.data = newOptions.xAxis.data;
+    defectChartOption.series[0].data = newOptions.series[0].data;
+  } catch (error) {
+    console.error('获取缺陷数据失败:', error);
+  } finally {
+    defectChartLoading.value = false;
+  }
+}
 
 const handleExportPDF = async () => {
   if (!exportAreaRef.value) {
@@ -250,11 +257,15 @@ const handleExportPDF = async () => {
   }
 };
 
-onMounted(() => {
-  fetchDashboardData();
-  fetchTrendsData();
-  fetchCompositionData();
-  fetchStatusSummaryData();
+onMounted(async () => {
+  loading.value = true;
+  await Promise.all([
+    fetchDashboardData(),
+    fetchTrendsData(),
+    fetchStockStatusData(),
+    fetchDefectData()
+  ]);
+  loading.value = false;
 });
 </script>
 

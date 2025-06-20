@@ -14,9 +14,9 @@ const { protect } = require('../middleware/auth.middleware');
 const Transaction = require('../models/transaction.model'); // 引入Transaction模型
 const sequelize = require('../config/db.config'); // 引入sequelize实例
 
-// Définir un middleware de vérification des permissions d'administrateur
+// Middleware to check if the user is an admin
 const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && req.user.user_role === 'admin') {
     next();
   } else {
     res.status(403).json({ message: 'Forbidden: Admins only' });

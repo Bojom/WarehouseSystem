@@ -1,10 +1,35 @@
 import api from '@/utils/api';
 
 /**
- * 创建一个新的出入库事务
- * @param {object} transactionData - 事务数据
+ * 获取所有交易记录
+ * @param {object} params - 查询参数
  * @returns {Promise}
  */
-export const createTransaction = (transactionData) => {
-  return api.post('/transactions', transactionData);
+export const getTransactions = (params) => {
+  return api.get('/transactions', { params });
 };
+
+/**
+ * 创建一个新的交易记录
+ * @param {object} data - 交易数据 { part_id, trans_type, quantity, remarks }
+ * @returns {Promise}
+ */
+export const createTransaction = (data) => {
+  return api.post('/transactions', data);
+};
+
+/**
+ * 导出交易记录为 Excel
+ * @returns {Promise}
+ */
+export const exportTransactions = () => {
+  return api.get('/transactions/export', {
+    responseType: 'blob' // Important for file downloads
+  });
+};
+
+// 新增：报告故障配件
+export function reportFault(faultData) {
+    return api.post('/transactions/fault', faultData);
+}
+

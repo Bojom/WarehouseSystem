@@ -1,26 +1,36 @@
-import { defineConfig, globalIgnores } from 'eslint/config'
-import globals from 'globals'
-import js from '@eslint/js'
-import pluginVue from 'eslint-plugin-vue'
-import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
+// @ts-check
 
-export default defineConfig([
+import globals from 'globals';
+import pluginJs from '@eslint/js';
+import pluginVue from 'eslint-plugin-vue';
+
+export default [
   {
-    name: 'app/files-to-lint',
-    files: ['**/*.{js,mjs,jsx,vue}'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
   },
-
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
-
+  pluginJs.configs.recommended,
+  ...pluginVue.configs['flat/recommended'],
   {
+    files: ['**/*.js', '**/*.vue', '**/*.cy.js'],
     languageOptions: {
       globals: {
         ...globals.browser,
+        ...globals.node,
+        // Cypress globals
+        cy: 'readonly',
+        Cypress: 'readonly',
+        expect: 'readonly',
+        assert: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        before: 'readonly',
+        beforeEach: 'readonly',
+        after: 'readonly',
+        afterEach: 'readonly',
       },
     },
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
   },
-
-  js.configs.recommended,
-  ...pluginVue.configs['flat/essential'],
-  skipFormatting,
-])
+];

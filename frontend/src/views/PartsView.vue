@@ -17,7 +17,7 @@
         </el-form-item>
       </el-form>
       <div>
-        <el-button type="primary" v-if="userStore.isAdmin" @click="handleOpenAddDialog">新增配件 (Add Part)</el-button>
+        <el-button type="primary" v-if="userStore.isAdmin" @click="handleOpenAddDialog" data-cy="add-part-button">新增配件 (Add Part)</el-button>
       </div>
     </el-card>
 
@@ -29,6 +29,7 @@
         style="width: 100%"
         @expand-change="handleExpandChange"
         row-key="id"
+        data-cy="parts-table"
       >
         <el-table-column type="expand">
           <template #default="props">
@@ -48,11 +49,12 @@
         <el-table-column prop="spec" label="规格 (Specification)" />
         <el-table-column prop="stock" label="当前库存 (Stock)" />
         <el-table-column prop="Supplier.supplier_name" label="供应商 (Supplier)" />
-        <el-table-column label="操作 (Actions)" width="200">
+        <el-table-column label="操作 (Actions)" width="300">
           <template #default="scope">
             <div class="action-buttons" v-if="userStore.isAdmin">
-              <el-button size="small" @click="handleOpenEditDialog(scope.row)">编辑 (Edit)</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除 (Delete)</el-button>
+              <el-button size="small" @click="handleOpenEditDialog(scope.row)" data-cy="edit-part-button">编辑 (Edit)</el-button>
+              <el-button size="small" type="danger" @click="handleDelete(scope.row)" data-cy="delete-part-button">删除 (Delete)</el-button>
+              <el-button size="small" type="warning" @click="handleOpenDefectDialog(scope.row)" data-cy="defect-part-button">报告缺陷 (Defect)</el-button>
             </div>
             <div v-else-if="userStore.user?.role === 'operator'">
                <el-button size="small" @click="handleViewDetails(scope.row)">查看 (Check)</el-button>
@@ -93,10 +95,31 @@
             type="primary"
             @click="handleSubmit"
             :loading="isSubmitting"
+            data-cy="part-form-submit-button"
           >
             确定 (Confirm)
           </el-button>
         </span>
+      </template>
+    </el-dialog>
+
+    <!-- Defect Report Dialog -->
+    <el-dialog v-model="defectDialogVisible" title="报告缺陷配件 (Report Defective Part)" width="500px" @close="handleCloseDefectDialog">
+      <div v-if="currentPart">
+        <p><strong>配件 (Part):</strong> {{ currentPart.part_name }} ({{ currentPart.part_number }})</p>
+        <p><strong>当前库存 (Current Stock):</strong> {{ currentPart.stock }}</p>
+        <el-form ref="defectFormRef" :model="defectForm" :rules="defectRules" label-width="120px" style="margin-top: 20px;">
+          <el-form-item label="缺陷数量" prop="quantity">
+            <el-input-number v-model="defectForm.quantity" :min="1" :max="currentPart.stock" />
+          </el-form-item>
+          <el-form-item label="备注" prop="remarks">
+            <el-input v-model="defectForm.remarks" type="textarea" placeholder="请描述缺陷 (Please describe the defect)"></el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="handleCloseDefectDialog">取消 (Cancel)</el-button>
+        <el-button type="primary" @click="handleDefectSubmit" :loading="isSubmitting">提交 (Submit)</el-button>
       </template>
     </el-dialog>
   </div>
@@ -110,6 +133,7 @@ import PartForm from '@/components/PartForm.vue';
 import BaseChart from '@/components/charts/BaseChart.vue';
 import { getParts, createPart, updatePart, deletePart } from '@/api/part.api.js';
 import { getSuppliers } from '@/api/supplier.api.js';
+import { createTransaction } from '@/api/transaction.api.js';
 import api from '@/utils/api'; // Import the generic api utility
 
 // --- 状态管理 ---
@@ -131,6 +155,18 @@ const partFormRef = ref(null);
 const suppliersList = ref([]);
 
 const dialogTitle = computed(() => (currentPart.value && currentPart.value.id) ? '编辑配件 (Edit Part)' : '新增配件 (Add Part)');
+
+// --- Defect Dialog State ---
+const defectDialogVisible = ref(false);
+const defectFormRef = ref(null);
+const defectForm = ref({
+  quantity: 1,
+  remarks: '',
+});
+const defectRules = {
+  quantity: [{ required: true, message: '请输入缺陷数量', trigger: 'blur' }],
+  remarks: [{ required: true, message: '请输入缺陷备注', trigger: 'blur' }],
+};
 
 // --- 获取数据的核心函数 ---
 const fetchParts = async () => {
@@ -192,13 +228,19 @@ const handleSubmit = async () => {
     fetchParts(); // 刷新列表
   } catch (error) {
     console.error('表单提交失败:', error);
-    if (error.response && error.response.status === 409) {
-      // 后端返回了特定的冲突错误
-      ElMessage.error(error.response.data.message);
-    } else {
-      // 其他错误
-      ElMessage.error('操作失败，请检查表单数据。 (Operation failed, please check the form data.)');
+
+    // Display more specific error message from backend if available
+    let errorMessage = '操作失败，请检查表单数据。 (Operation failed, please check the form data.)';
+    if (error.response && error.response.data && error.response.data.message) {
+      // Check for known Sequelize unique constraint error
+      if (error.response.data.error && /unique constraint/i.test(error.response.data.error)) {
+        errorMessage = '配件编号已存在 (Part number already exists).';
+      } else {
+        // Use the general message from the backend
+        errorMessage = `操作失败: ${error.response.data.message}`;
+      }
     }
+    ElMessage.error(errorMessage);
   } finally {
     isSubmitting.value = false; // 结束提交，隐藏加载状态
   }
@@ -301,11 +343,46 @@ const createTrendChartOption = (dates, inData, outData) => {
   });
 };
 
+const handleOpenDefectDialog = (part) => {
+  currentPart.value = { ...part }; // Use the same currentPart state
+  defectForm.value = { quantity: 1, remarks: '' }; // Reset form
+  defectDialogVisible.value = true;
+};
+
+const handleCloseDefectDialog = () => {
+  defectDialogVisible.value = false;
+  currentPart.value = null;
+};
+
+const handleDefectSubmit = async () => {
+  try {
+    await defectFormRef.value.validate();
+    isSubmitting.value = true;
+
+    const transactionData = {
+      part_id: currentPart.value.id,
+      trans_type: 'DEFECT',
+      quantity: defectForm.value.quantity,
+      remarks: defectForm.value.remarks,
+    };
+
+    await createTransaction(transactionData);
+
+    ElMessage.success('缺陷已上报 (Defect has been reported successfully).');
+    handleCloseDefectDialog();
+    fetchParts(); // Refresh the parts list to show updated stock
+  } catch (error) {
+    console.error('Failed to report defect:', error);
+    ElMessage.error(error.response?.data?.error || '上报失败 (Failed to report).');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
 // --- 生命周期钩子 ---
-onMounted(async () => {
-  await userStore.fetchUser();
+onMounted(() => {
   fetchParts();
-  fetchSuppliers(); // 获取供应商列表
+  fetchSuppliers(); // <-- 添加这一行来获取供应商数据
 });
 </script>
 

@@ -15,6 +15,7 @@ const Supplier = sequelize.define('Supplier', {
   },
   contact: {
     type: DataTypes.STRING,
+    allowNull: true,
   },
 }, {
   tableName: 'suppliers',

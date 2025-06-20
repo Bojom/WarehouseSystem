@@ -11,7 +11,7 @@ const Transaction = sequelize.define('Transaction', {
     autoIncrement: true,
   },
   trans_type: {
-    type: DataTypes.ENUM('IN', 'OUT'),
+    type: DataTypes.ENUM('IN', 'OUT', 'FAULT'),
     allowNull: false,
     field: 'trans_type'
   },

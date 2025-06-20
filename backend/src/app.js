@@ -7,11 +7,11 @@ const express = require('express');
 const sequelize = require('./config/db.config.js');
 const cors = require('cors') //intégration de cors
 const userRoutes = require('./routes/user.routes.js');
-const partsRoutes = require('./routes/parts.routes.js');
-const supplierRoutes = require('./routes/supplier.routes.js');
-const transactionRoutes = require('./routes/transaction.routes.js');
-const inventoryRoutes = require('./routes/inventory.routes.js');
-const dashboardRoutes = require('./routes/dashboard.routes.js');
+const partRoutes = require('./routes/parts.routes');
+const inventoryRoutes = require('./routes/inventory.routes');
+const transactionRoutes = require('./routes/transaction.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
+const supplierRoutes = require('./routes/supplier.routes');
 // 2. 初始化 Express 应用
 const app = express();
 
@@ -41,10 +41,10 @@ const PORT = process.env.PORT || 3001; // 从.env文件读取端口，如果没�
 // 4. 定义一个函数来测试数据库连接
 const testDbConnection = async () => {
   try {
-    await sequelize.authenticate(); // 尝试与数据库建立连接
-    console.log('✅ 数据库连接成功 (Database connection has been established successfully.)');
+    await sequelize.authenticate();
+    console.log('Database connection has been established successfully.');
   } catch (error) {
-    console.error('❌ 无法连接到数据库 (Unable to connect to the database):', error);
+    console.error('Unable to connect to the database:', error);
   }
 };
 
@@ -59,14 +59,19 @@ app.get('/api/test', (req, res) => {
 });
 
 app.use('/api/users', userRoutes); //utilisation de routes pour user
-app.use('/api/parts', partsRoutes);
-app.use('/api/suppliers', supplierRoutes);
-app.use('/api/transactions', transactionRoutes);
+app.use('/api/parts', partRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/supplier', supplierRoutes);
 
 // 6. 启动服务器并测试数据库连接
 app.listen(PORT, () => {
   console.log(`🚀 服务器正在端口 ${PORT} 上运行 (Server is running on port ${PORT})`);
   testDbConnection(); // 服务器启动时，调用数据库连接测试函数
+});
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  // ... existing code ...
 });

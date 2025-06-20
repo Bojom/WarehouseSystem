@@ -1,38 +1,41 @@
 // backend/src/middleware/auth.middleware.js
 
 const jwt = require('jsonwebtoken');
+const User = require('../models/user.model.js'); // 引入User模型
 
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
   let token;
+  const authHeader = req.headers.authorization;
 
-  // 1. 优先从请求头 (Header) 中获取 token
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      // 获取 'Bearer ' 后面的 token 部分
-      token = req.headers.authorization.split(' ')[1];
-    } catch (error) {
-        return res.status(401).json({ message: 'Not authorized, token format is invalid' });
-    }
-  } 
-  // 2. 如果请求头中没有，就尝试从 URL 查询参数中获取 token
-  else if (req.query.token) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
     token = req.query.token;
   }
 
-  // 3. 如果最终还是没有找到 token，则拒绝访问
   if (!token) {
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
 
-  // 4. 如果找到了 token，就验证它
   try {
+    // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_secret_key');
-    req.user = decoded;
+
+    // Find the user in the database
+    req.user = await User.findByPk(decoded.id, {
+      attributes: { exclude: ['password_hash'] }
+    });
+    
+    // If user not found after decoding token, it's an invalid token situation
+    if (!req.user) {
+       return res.status(401).json({ message: 'Not authorized, user not found' });
+    }
+
     next();
   } catch (error) {
+    // This will catch errors from jwt.verify (e.g., invalid signature, expired token)
+    // and any potential errors from the database lookup.
+    console.error('Authentication error:', error);
     return res.status(401).json({ message: 'Not authorized, token failed' });
   }
 };

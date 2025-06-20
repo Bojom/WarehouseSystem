@@ -20,6 +20,7 @@
           <el-input
             v-model="loginForm.user_name"
             placeholder="请输入用户名/Enter username"
+            data-cy="login-username-input"
           ></el-input>
         </el-form-item>
 
@@ -30,12 +31,13 @@
             type="password"
             placeholder="请输入密码/Enter password"
             show-password
+            data-cy="login-password-input"
           ></el-input>
         </el-form-item>
 
         <!-- 登录按钮 -->
         <el-form-item>
-          <el-button type="primary" style="width: 100%;" @click="handleLogin">登录/Login</el-button>
+          <el-button type="primary" style="width: 100%;" @click="handleLogin" data-cy="login-submit-button">登录/Login</el-button>
         </el-form-item>
       </el-form>
 

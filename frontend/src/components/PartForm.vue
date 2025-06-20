@@ -2,19 +2,19 @@
 <template>
   <el-form ref="formRef" :model="form" :rules="rules" label-width="200px">
     <el-form-item label="配件编号 (Part Number)" prop="part_number">
-      <el-input v-model="form.part_number" placeholder="请输入配件编号 (Enter Part Number)"></el-input>
+      <el-input v-model="form.part_number" placeholder="请输入配件编号 (Enter Part Number)" data-cy="part-form-number-input"></el-input>
     </el-form-item>
     <el-form-item label="配件名称 (Part Name)" prop="part_name">
-      <el-input v-model="form.part_name" placeholder="请输入配件名称 (Enter Part Name)"></el-input>
+      <el-input v-model="form.part_name" placeholder="请输入配件名称 (Enter Part Name)" data-cy="part-form-name-input"></el-input>
     </el-form-item>
     <el-form-item label="规格 (Specification)" prop="spec">
-      <el-input v-model="form.spec" placeholder="请输入规格 (Enter Specification)"></el-input>
+      <el-input v-model="form.spec" placeholder="请输入规格 (Enter Specification)" data-cy="part-form-spec-input"></el-input>
     </el-form-item>
     <el-form-item label="库存数量 (Stock)" prop="stock">
-      <el-input-number v-model="form.stock" :min="0" />
+      <el-input-number v-model="form.stock" :min="0" data-cy="part-form-stock-input"/>
     </el-form-item>
     <el-form-item label="供应商 (Supplier)" prop="supplier_id">
-      <el-select v-model="form.supplier_id" placeholder="请选择供应商 (Select Supplier)" style="width: 100%;">
+      <el-select v-model="form.supplier_id" placeholder="请选择供应商 (Select Supplier)" style="width: 100%;" data-cy="part-form-supplier-select">
         <!-- 这里的选项将由父组件传入 -->
         <el-option
           v-for="item in suppliers"

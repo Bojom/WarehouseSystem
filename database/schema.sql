@@ -39,7 +39,7 @@ CREATE TABLE transactions (
     id SERIAL PRIMARY KEY,
     part_id INT NOT NULL REFERENCES parts(id) ON DELETE CASCADE,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    trans_type VARCHAR(10) NOT NULL CHECK (trans_type IN ('IN', 'OUT')),
+    trans_type VARCHAR(10) NOT NULL CHECK (trans_type IN ('IN', 'OUT', 'FAULT')),
     quantity INT NOT NULL CHECK (quantity > 0),
     trans_time TIMESTAMP WITH TIME ZONE DEFAULT now(),
     remarks TEXT

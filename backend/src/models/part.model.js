@@ -24,6 +24,7 @@ const Part = sequelize.define('Part', {
   unit: {
     type: DataTypes.STRING(50),
     allowNull: false,
+    defaultValue: 'pcs',
   },
   stock: {
     type: DataTypes.INTEGER,
@@ -39,6 +40,14 @@ const Part = sequelize.define('Part', {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 100,
+  },
+  supplier_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: Supplier,
+      key: 'id'
+    }
   },
 }, {
   tableName: 'parts',

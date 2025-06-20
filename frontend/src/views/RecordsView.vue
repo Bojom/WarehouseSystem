@@ -34,6 +34,7 @@
           <el-select v-model="queryParams.type" placeholder="请选择类型 / Please select a type" clearable>
             <el-option label="入库 / In" value="IN" />
             <el-option label="出库 / Out" value="OUT" />
+            <el-option label="故障 / Fault" value="FAULT" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -46,6 +47,7 @@
     <!-- 2. 操作区域 -->
     <el-card class="action-card">
       <el-button type="success" @click="handleExport">导出Excel / Export Excel</el-button>
+      <el-button type="danger" @click="openFaultDialog">报告故障 / Report Fault</el-button>
     </el-card>
 
     <!-- 3. 数据表格和分页 -->
@@ -60,8 +62,8 @@
         <el-table-column prop="Part.part_name" label="配件名称 / Part Name" />
         <el-table-column label="类型 / Type" width="100" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.type === 'IN' ? 'success' : 'warning'">
-              {{ scope.row.type === 'IN' ? '入库' : '出库' }}
+            <el-tag :type="getTagType(scope.row.type)">
+              {{ getTypeText(scope.row.type) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -80,6 +82,20 @@
         @current-change="handlePageChange"
       />
     </el-card>
+
+    <!-- 故障报告对话框 -->
+    <el-dialog
+      v-model="faultDialogVisible"
+      title="报告故障配件 / Report Faulty Part"
+      width="50%"
+      @close="handleFaultDialogClose"
+    >
+      <FaultReportForm v-if="faultDialogVisible" ref="faultForm" @submit="handleFaultSubmit" />
+      <template #footer>
+        <el-button @click="faultDialogVisible = false">取消 / Cancel</el-button>
+        <el-button type="primary" @click="submitFaultForm">提交 / Submit</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -88,6 +104,9 @@ import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import api from '@/utils/api';
 import { getParts } from '@/api/part.api'; // 引入配件API
+import { getTransactionsForExport } from '@/api/transaction.api'; // 引入导出API
+import { reportFault } from '@/api/transaction.api'; // 引入故障报告API
+import FaultReportForm from '@/components/FaultReportForm.vue'; // 引入故障报告表单
 
 // --- 工具函数 ---
 const formatDateTime = (isoString) => {
@@ -120,12 +139,28 @@ const formatDateTime = (isoString) => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${offsetString}`;
 };
 
+const getTagType = (type) => {
+  if (type === 'IN') return 'success';
+  if (type === 'OUT') return 'warning';
+  if (type === 'FAULT') return 'danger';
+  return '';
+};
+
+const getTypeText = (type) => {
+  if (type === 'IN') return '入库';
+  if (type === 'OUT') return '出库';
+  if (type === 'FAULT') return '故障';
+  return '未知';
+};
+
 // --- 状态管理 ---
 const recordsList = ref([]);
 const total = ref(0);
 const loading = ref(false);
 const partsForSelect = ref([]); // 用于配件下拉选择
 const dateRange = ref([]); // 用于存储日期范围选择器的值
+const faultDialogVisible = ref(false); // 控制故障对话框的显示
+const faultForm = ref(null); // 引用故障报告表单组件
 
 // 查询参数
 const queryParams = reactive({
@@ -198,50 +233,60 @@ const handlePageChange = (newPage) => {
   fetchRecords();
 };
 
-const handleExport = () => {
-  // 1. 获取 token
-  const token = localStorage.getItem('token');
-  if (!token) {
-    ElMessage.error('请先登录！');
-    return;
+const handleExport = async () => {
+  try {
+    const response = await getTransactionsForExport(queryParams);
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = 'records.xlsx';
+    if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch && fileNameMatch.length === 2)
+            fileName = decodeURIComponent(fileNameMatch[1]);
+    }
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    ElMessage.success('导出成功');
+  } catch (error) {
+    ElMessage.error('导出失败');
+    console.error('导出Excel失败:', error);
   }
+};
 
-  // 2. 准备筛选参数
-  const exportParams = { ...queryParams };
-  delete exportParams.page;
-  delete exportParams.pageSize;
+// --- 故障报告处理 ---
+const openFaultDialog = () => {
+  faultDialogVisible.value = true;
+};
 
-  // 将 partIds 数组转换为逗号分隔的字符串, 并使用 partId 作为键
-  if (exportParams.partIds && exportParams.partIds.length > 0) {
-    exportParams.partId = exportParams.partIds.join(',');
+const handleFaultDialogClose = () => {
+  if (faultForm.value) {
+    faultForm.value.resetForm();
   }
-  delete exportParams.partIds;
+};
 
-  // 更新日期参数
-  if (dateRange.value && dateRange.value.length === 2) {
-    exportParams.startDate = dateRange.value[0];
-    exportParams.endDate = dateRange.value[1];
-  } else {
-    exportParams.startDate = '';
-    exportParams.endDate = '';
+const submitFaultForm = () => {
+  if (faultForm.value) {
+    faultForm.value.submitForm();
   }
+};
 
-  // 过滤掉值为空的参数
-  const filteredParams = Object.fromEntries(
-    // eslint-disable-next-line no-unused-vars
-    Object.entries(exportParams).filter(([_, v]) => v !== null && v !== '')
-  );
-
-  // 3. 使用 URLSearchParams 将参数对象转换为查询字符串
-  const queryString = new URLSearchParams(filteredParams).toString();
-
-  // 4. 拼接最终的URL，附上 token
-  const exportUrl = `${api.defaults.baseURL}/transactions/export?${queryString}&token=${token}`;
-
-  console.log('正在导出, URL:', exportUrl);
-
-  // 5. 使用 window.open 触发下载
-  window.open(exportUrl, '_blank');
+const handleFaultSubmit = async (formData) => {
+  try {
+    await reportFault(formData);
+    ElMessage.success('故障报告提交成功 / Fault reported successfully');
+    faultDialogVisible.value = false;
+    fetchRecords(); // 刷新记录列表
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || '操作失败 / Operation failed';
+    ElMessage.error(errorMessage);
+    console.error('提交故障报告失败:', error);
+  }
 };
 
 // --- 生命周期钩子 ---

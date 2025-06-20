@@ -7,7 +7,7 @@ const { protect } = require('../middleware/auth.middleware');
 
 // Middleware pour vérifier si l'utilisateur est un administrateur
 const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && req.user.user_role === 'admin') {
     next();
   } else {
     res.status(403).json({ message: 'Accès interdit: réservé aux administrateurs' });
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
     let whereCondition = {};
     if (search) {
       whereCondition = {
-        name: { [Op.iLike]: `%${search}%` } // Recherche insensible à la casse
+        supplier_name: { [Op.iLike]: `%${search}%` }
       };
     }
 
@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
       where: whereCondition,
       limit,
       offset,
-      order: [['name', 'ASC']]
+      order: [['supplier_name', 'ASC']]
     });
 
     res.json({

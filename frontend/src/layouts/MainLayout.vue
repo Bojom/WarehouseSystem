@@ -28,6 +28,10 @@
           <el-icon><i-ep-document /></el-icon>
           <span>出入库记录 (Records)</span>
         </el-menu-item>
+        <el-menu-item index="/suppliers" v-if="userStore.isAdmin">
+          <el-icon><i-ep-van /></el-icon>
+          <span>供应商管理 (Suppliers)</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -52,9 +56,18 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
+import { onMounted } from 'vue';
 
 const router = useRouter();
 const userStore = useUserStore();
+
+onMounted(() => {
+  // Fetch user info when the layout is mounted
+  // This ensures we have the role information
+  if (!userStore.user) {
+    userStore.fetchUser();
+  }
+});
 
 const handleLogout = () => {
   userStore.logout();
