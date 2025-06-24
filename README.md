@@ -124,9 +124,14 @@ docker-compose up --build -d
 The application will be availble at http://localhost:8080.
 
 ### 4.Manage Services:
-* To view logs: docker-compose logs -f
-* To stop and remove containers: docker-compose down
-
+* To view logs:
+ ```bash
+ docker-compose logs -f
+ ```
+* To stop and remove containers:
+ ```bash
+ docker-compose down
+ ```
 
 
 © 2025 [Bojom]. All Rights Reserved.
