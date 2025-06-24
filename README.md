@@ -41,42 +41,42 @@ git clone https://github.com/Bojom/EuroLink_WarehouseSystem.git
 cd EuroLink_WarehouseSystem
 ```
 ### 3. Backend setup
-# Navigate to the backend directory
+Navigate to the backend directory
 
 ```bash
 cd backend
 ```
-# Install dependencies
+Install dependencies
 ```bash
 npm install
 ```
 
-# Create the .env file from the example and fill in your details
-# You will need to provide your database credentials and a JWT secret key.
+Create the .env file from the example and fill in your details
+You will need to provide your database credentials and a JWT secret key.
 ```bash
 cp .env.example .env
 nano .env # Or use your favorite text editor
 ```
 
 
-# Start the backend server (runs on http://localhost:3001)
+Start the backend server (runs on http://localhost:3001)
 ```bash
 npm run dev
 ```
 
 ### 4. Frontend setup
-# Navigate to the frontend directory from the root
+Navigate to the frontend directory from the root
 
 ```bash
 cd frontend
 ```
-# Install dependencies
+Install dependencies
 
 ```bash
 npm install
 ```
 
-# Start the frontend development server (runs on http://localhost:5173)
+Start the frontend development server (runs on http://localhost:5173)
 
 ```bash
 npm run dev
@@ -111,7 +111,7 @@ npx cypress open
 
 ### 1.Prerequisites :
 
-*docker : https://www.docker.com/products/docker-desktop/
+* docker : https://www.docker.com/products/docker-desktop/
 
 ### 2.Build and run :
 
