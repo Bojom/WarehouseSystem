@@ -7,17 +7,17 @@ const Transaction = require('../models/transaction.model');
 const { protect } = require('../middleware/auth.middleware');
 const Supplier = require('../models/supplier.model');
 
-// GET /api/dashboard - 获取仪表盘聚合数据
+// GET /api/dashboard
 router.get('/', protect, async (req, res) => {
   try {
-    // 1. 配件种类总数
+    // 1. part variety count
     const partVarietyCount = await Part.count();
 
-    // 2. 今日出入库次数
+    // 2. today inbound and outbound count
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // 当天开始时间
+    today.setHours(0, 0, 0, 0); // start of the day
     const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1); // 第二天开始时间
+    tomorrow.setDate(tomorrow.getDate() + 1); // start of the next day
 
     const todayInCount = await Transaction.count({
       where: {
@@ -39,7 +39,7 @@ router.get('/', protect, async (req, res) => {
       },
     });
 
-    // 3. 库存预警: 查找库存量小于最小库存量的配件
+    // 3. stock warning: find parts with stock less than the minimum stock
     const lowStockItems = await Part.findAll({
       where: {
         stock: {
@@ -56,12 +56,13 @@ router.get('/', protect, async (req, res) => {
       lowStockItems,
     });
   } catch (error) {
-    console.error('Failed to fetch dashboard data:', error);
-    res.status(500).json({ message: 'Error fetching dashboard data', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error fetching dashboard data', error: error.message });
   }
 });
 
-// GET /api/transactions/trends - 重构后的趋势数据端点
+// GET /api/transactions/trends
 router.get('/trends', protect, async (req, res) => {
   try {
     const days = parseInt(req.query.days || 30, 10);
@@ -94,80 +95,101 @@ router.get('/trends', protect, async (req, res) => {
 
     const results = await sequelize.query(query, {
       replacements: { days },
-      type: sequelize.QueryTypes.SELECT
+      type: sequelize.QueryTypes.SELECT,
     });
 
-    // The data is already perfectly formatted. We just extract it into the arrays for ECharts.
-    const dates = results.map(row => row.report_date);
-    const inboundData = results.map(row => parseInt(row.inbound_count, 10));
-    const outboundData = results.map(row => parseInt(row.outbound_count, 10));
+    // We just extract the data into the arrays for ECharts.
+    const dates = results.map((row) => row.report_date);
+    const inboundData = results.map((row) => parseInt(row.inbound_count, 10));
+    const outboundData = results.map((row) => parseInt(row.outbound_count, 10));
 
     res.json({ dates, inboundData, outboundData });
-
   } catch (error) {
-    console.error('Failed to fetch trends data:', error);
     res.status(500).json({ message: 'Error fetching trends data' });
   }
 });
 
-// GET /api/transactions - 获取出入库记录列表（带筛选和分页）
-router.get('/', protect, async (req, res) => {
+// GET /api/dashboard/stock-status
+router.get('/stock-status', protect, async (req, res) => {
   try {
-    // ... existing code ...
-  } catch (error) {
-    console.error('Failed to fetch transactions:', error);
-    res.status(500).json({ message: 'Error fetching transactions', error: error.message });
-  }
-});
-
-// --- Defective Parts by Supplier ---
-// GET /api/dashboard/defective-summary
-router.get('/defective-summary', async (req, res) => {
-  try {
-    const defectSummary = await Transaction.findAll({
-      where: { trans_type: 'DEFECT' },
-      attributes: [
-        [sequelize.fn('SUM', sequelize.col('quantity')), 'total_defects'],
-      ],
-      include: [{
-        model: Part,
-        attributes: ['id', 'part_name'],
-        include: [{
-          model: Supplier,
-          attributes: ['id', 'supplier_name'],
-        }]
-      }],
-      group: ['Part.id', 'Part->Supplier.id'],
-      order: [[sequelize.fn('SUM', sequelize.col('quantity')), 'DESC']],
-      raw: true, // Get plain JSON results
+    const lowStock = await Part.count({
+      where: {
+        stock: { [Op.lt]: col('stock_min') },
+      },
     });
 
-    // Remap results for a cleaner structure
-    const results = defectSummary.map(item => ({
-      supplier_id: item['Part.Supplier.id'],
-      supplier_name: item['Part.Supplier.supplier_name'],
-      total_defects: parseInt(item.total_defects, 10),
-    }));
+    const overStock = await Part.count({
+      where: {
+        stock_max: { [Op.ne]: null },
+        stock: { [Op.gt]: col('stock_max') },
+      },
+    });
 
-    // Aggregate results by supplier
-    const finalSummary = results.reduce((acc, current) => {
-      const existing = acc.find(item => item.supplier_id === current.supplier_id);
-      if (existing) {
-        existing.total_defects += current.total_defects;
-      } else {
-        acc.push({ ...current });
-      }
-      return acc;
-    }, []);
-    
-    // Sort final summary
-    finalSummary.sort((a, b) => b.total_defects - a.total_defects);
+    const totalParts = await Part.count();
+    const normalStock = totalParts - lowStock - overStock;
 
-    res.json(finalSummary);
+    res.json({ lowStock, normalStock, overStock });
   } catch (error) {
-    console.error('Error fetching defective summary:', error);
-    res.status(500).json({ message: 'Error fetching defective summary', error: error.message });
+    res.status(500).json({ message: 'Error fetching stock status data' });
   }
 });
 
-module.exports = router; 
+// GET /api/transactions
+router.get('/', protect, async (req, res) => {
+  try {
+  } catch (error) {
+    console.error('Failed to fetch transactions:', error);
+    res
+      .status(500)
+      .json({ message: 'Error fetching transactions', error: error.message });
+  }
+});
+
+// GET /api/dashboard/top-anomaly-suppliers
+router.get('/top-anomaly-suppliers', protect, async (req, res) => {
+  try {
+    const topN = req.query.limit || 10;
+
+    const results = await Transaction.findAll({
+      where: { trans_type: 'ANOMALY' },
+      attributes: [
+        [sequelize.fn('SUM', sequelize.col('quantity')), 'anomalyScore'],
+      ],
+      include: [
+        {
+          model: Part,
+          attributes: ['part_name'],
+          required: true,
+          include: [
+            {
+              model: Supplier,
+              attributes: ['supplier_name'],
+              required: true,
+            },
+          ],
+        },
+      ],
+      group: ['Part->Supplier.id', 'Part->Supplier.supplier_name'],
+      order: [[sequelize.literal('"anomalyScore"'), 'DESC']],
+      limit: topN,
+      raw: true,
+      subQuery: false,
+    });
+
+    const supplierNames = results.map(
+      (item) => item['Part.Supplier.supplier_name']
+    );
+    const anomalyScores = results.map((item) =>
+      parseInt(item.anomalyScore, 10)
+    );
+
+    res.json({ supplierNames, anomalyScores });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error fetching top anomaly suppliers',
+      error: error.message,
+    });
+  }
+});
+
+module.exports = router;

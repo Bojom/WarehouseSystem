@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-view" v-loading="loading" ref="exportAreaRef">
-    <!-- 1. 顶部标题与导出按钮 -->
+    <!-- 1. top title and export button -->
     <el-card class="page-header-card">
       <div class="card-header">
         <span>仪表盘概览</span>
@@ -10,9 +10,9 @@
       </div>
     </el-card>
 
-    <!-- 2. 顶部KPI与状态图 -->
+    <!-- 2. top KPI and status chart -->
     <el-row :gutter="20">
-      <!-- KPI 卡片区 -->
+      <!-- KPI card section -->
       <el-col :span="16">
         <el-row :gutter="20" class="kpi-cards">
           <el-col :span="6">
@@ -42,27 +42,29 @@
           <el-col :span="6">
             <el-card shadow="hover" body-style="background-color: #fef0f0;">
               <div class="card-content">
-                <div class="label" style="color: #f56c6c;">库存预警数量</div>
-                <div class="value" style="color: #f56c6c;">{{ dashboardData?.lowStockItems?.length ?? 'N/A' }}</div>
+                <div class="label" style="color: #f56c6c">库存预警数量</div>
+                <div class="value" style="color: #f56c6c">
+                  {{ dashboardData?.lowStockItems?.length ?? 'N/A' }}
+                </div>
               </div>
             </el-card>
           </el-col>
         </el-row>
       </el-col>
-      <!-- 库存状态柱状图 -->
+      <!-- stock status bar chart -->
       <el-col :span="8">
-        <el-card class="chart-section" style="margin-top: 0;">
+        <el-card class="chart-section" style="margin-top: 0">
           <BaseChart :option="statusChartOption" :loading="statusChartLoading" height="120px" />
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 图表区域 -->
+    <!-- chart area: put two charts in the same row -->
     <el-row :gutter="20">
-      <!-- 趋势图 -->
+      <!-- trend chart -->
       <el-col :span="12">
         <el-card class="chart-section">
-           <template #header>
+          <template #header>
             <div class="card-header">
               <span>最近30天出入库趋势</span>
             </div>
@@ -71,25 +73,20 @@
         </el-card>
       </el-col>
 
-      <!-- 新增：库存占比饼图 (this section will be removed) -->
-
-    </el-row>
-
-    <!-- 新增：缺陷供应商排行 -->
-    <el-row :gutter="20">
+      <!-- anomaly supplier ranking -->
       <el-col :span="12">
         <el-card class="chart-section">
-           <template #header>
+          <template #header>
             <div class="card-header">
-              <span>缺陷供应商排行 (Top Defective Suppliers)</span>
+              <span>异常供应商排行 (Top Anomaly Suppliers)</span>
             </div>
           </template>
-          <BaseChart :option="defectChartOption" :loading="defectChartLoading" height="350px" />
+          <BaseChart :option="anomalyChartOption" :loading="anomalyChartLoading" height="350px" />
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 4. 预警信息区 -->
+    <!-- 4. warning information section -->
     <el-card class="warning-section">
       <template #header>
         <div class="card-header">
@@ -113,27 +110,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue';
-import api from '@/utils/api';
-import BaseChart from '@/components/charts/BaseChart.vue';
-import { ElMessage } from 'element-plus';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import {
-  createTrendChartOption,
-  createDefectChartOption
-} from '@/utils/chart-options.js';
+import { ref, onMounted, reactive } from 'vue'
+import api from '@/utils/api'
+import BaseChart from '@/components/charts/BaseChart.vue'
+import { ElMessage } from 'element-plus'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
+import { createTrendChartOption, createAnomalyChartOption } from '@/utils/chart-options.js'
 
-const exportAreaRef = ref(null);
-const isExporting = ref(false);
-const dashboardData = ref(null);
-const loading = ref(true);
-const trendChartLoading = ref(false);
-const statusChartLoading = ref(false);
-const defectChartLoading = ref(false);
+const exportAreaRef = ref(null)
+const isExporting = ref(false)
+const dashboardData = ref(null)
+const loading = ref(true)
+const trendChartLoading = ref(false)
+const statusChartLoading = ref(false)
+const anomalyChartLoading = ref(false)
 
-const trendChartOption = reactive(createTrendChartOption());
-const defectChartOption = reactive(createDefectChartOption());
+const trendChartOption = reactive(createTrendChartOption())
+const anomalyChartOption = reactive(createAnomalyChartOption())
 
 const statusChartOption = reactive({
   tooltip: { trigger: 'axis' },
@@ -141,132 +135,130 @@ const statusChartOption = reactive({
   xAxis: {
     type: 'category',
     data: ['库存不足', '库存正常', '库存超额'],
-    axisLabel: { interval: 0 } // 确保标签都显示
+    axisLabel: { interval: 0 }, // ensure all labels are displayed
   },
-  yAxis: { type: 'value', show: false }, // 隐藏y轴
+  yAxis: { type: 'value', show: false }, // hide y-axis
   series: [
     {
       name: '配件种类',
       type: 'bar',
-      data: [], // 将被API数据填充
-      // 为不同的柱子设置不同颜色
+      data: [], // will be filled by API data
+      // set different colors for different bars
       itemStyle: {
         color: (params) => {
-          const colorList = ['#F56C6C', '#67C23A', '#E6A23C'];
-          return colorList[params.dataIndex];
-        }
-      }
+          const colorList = ['#F56C6C', '#67C23A', '#E6A23C']
+          return colorList[params.dataIndex]
+        },
+      },
     },
   ],
-});
+})
 
 const fetchDashboardData = async () => {
-  loading.value = true;
+  loading.value = true
   try {
-    const response = await api.get('/dashboard');
-    dashboardData.value = response.data;
+    const response = await api.get('/dashboard')
+    dashboardData.value = response.data
   } catch (error) {
-    console.error('获取仪表盘数据失败:', error);
+    console.error('获取仪表盘数据失败:', error)
   } finally {
-    loading.value = false;
-  }
-};
-
-const fetchTrendsData = async () => {
-  trendChartLoading.value = true;
-  try {
-    const response = await api.get('/dashboard/trends', { params: { days: 30 } });
-    const { dates, inboundData, outboundData } = response.data;
-
-    const newOptions = createTrendChartOption(dates, inboundData, outboundData);
-
-    trendChartOption.xAxis.data = newOptions.xAxis.data;
-    trendChartOption.series[0].data = newOptions.series[0].data;
-    trendChartOption.series[1].data = newOptions.series[1].data;
-
-  } catch (error) {
-    console.error('获取趋势图数据失败:', error);
-  } finally {
-    trendChartLoading.value = false;
-  }
-};
-
-const fetchStockStatusData = async () => {
-  statusChartLoading.value = true;
-  try {
-    const response = await api.get('/dashboard/stock-status');
-    const { lowStock, normalStock, overStock } = response.data;
-    statusChartOption.series[0].data = [lowStock, normalStock, overStock];
-  } catch (error) {
-    console.error('获取库存状态数据失败:', error);
-  } finally {
-    statusChartLoading.value = false;
+    loading.value = false
   }
 }
 
-const fetchDefectData = async () => {
-  defectChartLoading.value = true;
+const fetchTrendsData = async () => {
+  trendChartLoading.value = true
   try {
-    const response = await api.get('/dashboard/top-defective-suppliers');
-    const { supplierNames, defectCounts } = response.data;
-    const newOptions = createDefectChartOption(supplierNames, defectCounts);
-    defectChartOption.xAxis.data = newOptions.xAxis.data;
-    defectChartOption.series[0].data = newOptions.series[0].data;
+    const response = await api.get('/dashboard/trends', { params: { days: 30 } })
+    const { dates, inboundData, outboundData } = response.data
+
+    const newOptions = createTrendChartOption(dates, inboundData, outboundData)
+
+    trendChartOption.xAxis.data = newOptions.xAxis.data
+    trendChartOption.series[0].data = newOptions.series[0].data
+    trendChartOption.series[1].data = newOptions.series[1].data
   } catch (error) {
-    console.error('获取缺陷数据失败:', error);
+    console.error('获取趋势图数据失败:', error)
   } finally {
-    defectChartLoading.value = false;
+    trendChartLoading.value = false
+  }
+}
+
+const fetchStockStatusData = async () => {
+  statusChartLoading.value = true
+  try {
+    const response = await api.get('/dashboard/stock-status')
+    const { lowStock, normalStock, overStock } = response.data
+    statusChartOption.series[0].data = [lowStock, normalStock, overStock]
+  } catch (error) {
+    console.error('获取库存状态数据失败:', error)
+  } finally {
+    statusChartLoading.value = false
+  }
+}
+
+const fetchAnomalyData = async () => {
+  anomalyChartLoading.value = true
+  try {
+    const response = await api.get('/dashboard/top-anomaly-suppliers')
+    const { supplierNames, anomalyScores } = response.data
+    const newOptions = createAnomalyChartOption(supplierNames, anomalyScores)
+    anomalyChartOption.xAxis.data = newOptions.xAxis.data
+    anomalyChartOption.series[0].data = newOptions.series[0].data
+  } catch (error) {
+    console.error('获取异常数据失败:', error)
+  } finally {
+    anomalyChartLoading.value = false
   }
 }
 
 const handleExportPDF = async () => {
   if (!exportAreaRef.value) {
-    console.error("导出区域的DOM元素未找到。");
-    return;
+    console.error('导出区域的DOM元素未找到。')
+    return
   }
 
-  isExporting.value = true;
+  isExporting.value = true
   try {
     const canvas = await html2canvas(exportAreaRef.value, {
       scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
-    });
+    })
 
-    const contentWidth = canvas.width;
-    const contentHeight = canvas.height;
-    const pageData = canvas.toDataURL('image/jpeg', 1.0);
+    const contentWidth = canvas.width
+    const contentHeight = canvas.height
+    const pageData = canvas.toDataURL('image/jpeg', 1.0)
 
-    const PDF_PAGE_WIDTH = 595.28;
+    const PDF_PAGE_WIDTH = 595.28
 
-    const margin = 20;
-    const imgWidth = PDF_PAGE_WIDTH - margin * 2;
-    const imgHeight = (imgWidth / contentWidth) * contentHeight;
+    const margin = 20
+    const imgWidth = PDF_PAGE_WIDTH - margin * 2
+    const imgHeight = (imgWidth / contentWidth) * contentHeight
 
-    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pdf = new jsPDF('p', 'pt', 'a4')
 
-    pdf.addImage(pageData, 'JPEG', margin, margin, imgWidth, imgHeight);
+    pdf.addImage(pageData, 'JPEG', margin, margin, imgWidth, imgHeight)
 
-    pdf.save('仪表盘报表.pdf');
-
+    pdf.save('仪表盘报表.pdf')
   } catch (error) {
-    console.error('导出PDF失败:', error);
-    ElMessage.error('导出PDF时发生错误。');
+    console.error('导出PDF失败:', error)
+    ElMessage.error('导出PDF时发生错误。')
   } finally {
-    isExporting.value = false;
+    isExporting.value = false
   }
-};
+}
 
 onMounted(async () => {
-  loading.value = true;
+  loading.value = true
   await Promise.all([
     fetchDashboardData(),
     fetchTrendsData(),
     fetchStockStatusData(),
-    fetchDefectData()
-  ]);
-  loading.value = false;
-});
+    fetchAnomalyData(),
+  ])
+  loading.value = false
+})
 </script>
 
 <style scoped>

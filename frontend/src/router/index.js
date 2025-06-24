@@ -1,89 +1,99 @@
 // frontend/src/router/index.js
 
 import { createRouter, createWebHistory } from 'vue-router'
-
-// 1. 导入创建的页面组件
-import LoginView from '../views/LoginView.vue'
-import DashboardView from '../views/DashboardView.vue'
-import InventoryView from '../views/InventoryView.vue'
-import PartsView from '../views/PartsView.vue'
-import RecordsView from '../views/RecordsView.vue'
-import MainLayout from '../layouts/MainLayout.vue' // 1. 导入 MainLayout
-import StockMovementView from '../views/StockMovementView.vue'
-import SupplierView from '../views/SupplierView.vue'; // Import the new view
+import { ElMessage } from 'element-plus'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // 不需要布局的页面
+    // pages that don't need layout
     {
       path: '/login',
       name: 'login',
-      component: LoginView
+      component: () => import('../views/LoginView.vue'),
     },
-    // 需要统一布局的页面
+    // pages that need layout
     {
       path: '/',
-      component: MainLayout, // 2. 使用 MainLayout 作为根组件
+      component: () => import('../layouts/MainLayout.vue'), // use MainLayout as the root component
       redirect: '/dashboard',
       children: [
         {
           path: 'dashboard',
           name: 'dashboard',
-          component: DashboardView,
-          meta: { requiresAuth: true }
+          component: () => import('../views/DashboardView.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: '/inventory',
           name: 'inventory',
-          component: InventoryView,
-          meta: { requiresAuth: true }
+          component: () => import('../views/InventoryView.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: '/parts',
           name: 'parts',
-          component: PartsView,
-          meta: { requiresAuth: true }
+          component: () => import('../views/PartsView.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'records',
           name: 'records',
-          component: RecordsView,
-          meta: { requiresAuth: true }
+          component: () => import('../views/RecordsView.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'stock-movement',
           name: 'stock-movement',
-          component: StockMovementView,
-          meta: { requiresAuth: true, roles: ['admin', 'operator'] }
+          component: () => import('../views/StockMovementView.vue'),
+          meta: { requiresAuth: true, roles: ['admin', 'operator'] },
         },
         {
           path: 'suppliers',
           name: 'suppliers',
-          component: SupplierView,
-          meta: { requiresAuth: true, roles: ['admin'] } // Only admins can see this
-        }
-      ]
-    }
-  ]
+          component: () => import('../views/SupplierView.vue'),
+          meta: { requiresAuth: true, roles: ['admin'] }, // Only admins can see this
+        },
+        {
+          path: '/user-management',
+          name: 'user-management',
+          component: () => import('../views/UserManagementView.vue'),
+          meta: { requiresAuth: true, roles: ['admin'] },
+        },
+        {
+          path: '/register',
+          name: 'register',
+          component: () => import('../views/RegisterView.vue'),
+          meta: { requiresAuth: true, roles: ['admin'] }, // Only admins can access
+        },
+      ],
+    },
+  ],
 })
 
-// 全局前置导航守卫
+// global before each navigation guard
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('token');
+  const isAuthenticated = !!localStorage.getItem('token')
+  const userRole = localStorage.getItem('userRole') // We'll need to store the role
 
-  // 如果目标路由不是 'login' 并且用户未认证，则重定向到登录页
+  // if the target route is not 'login' and the user is not authenticated, redirect to login page
   if (to.name !== 'login' && !isAuthenticated) {
-    next({ name: 'login' });
+    next({ name: 'login' })
   }
-  // 如果用户已认证，但试图访问登录页，则重定向到仪表盘
+  // if the user is authenticated but trying to access the login page, redirect to dashboard
   else if (to.name === 'login' && isAuthenticated) {
-    next({ name: 'dashboard' });
+    next({ name: 'dashboard' })
   }
-  // 其他情况，正常放行
+  // check if the route requires a specific role
+  else if (to.meta.roles && !to.meta.roles.includes(userRole)) {
+    // if the user role does not meet the requirements, redirect to the permission denied page or dashboard
+    ElMessage.error('You do not have permission to access this page.')
+    next({ name: 'dashboard' })
+  }
+  // other cases, allow access
   else {
-    next();
+    next()
   }
-});
+})
 
 export default router

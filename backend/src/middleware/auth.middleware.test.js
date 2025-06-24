@@ -2,7 +2,6 @@ const { protect } = require('./auth.middleware');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
-// Mock external dependencies
 jest.mock('jsonwebtoken');
 jest.mock('../models/user.model');
 
@@ -38,7 +37,9 @@ describe('Auth Middleware (protect)', () => {
     await protect(mockRequest, mockResponse, nextFunction);
 
     expect(jwt.verify).toHaveBeenCalledWith(token, process.env.JWT_SECRET);
-    expect(User.findByPk).toHaveBeenCalledWith(decodedPayload.id, expect.any(Object));
+    expect(User.findByPk).toHaveBeenCalledWith(decodedPayload.id, {
+      attributes: { exclude: ['password_hash'] },
+    });
     expect(mockRequest.user).toEqual(mockUser);
     expect(nextFunction).toHaveBeenCalledTimes(1);
   });
@@ -54,7 +55,9 @@ describe('Auth Middleware (protect)', () => {
 
     await protect(mockRequest, mockResponse, nextFunction);
 
-    expect(User.findByPk).toHaveBeenCalledWith(decodedPayload.id, expect.any(Object));
+    expect(User.findByPk).toHaveBeenCalledWith(decodedPayload.id, {
+      attributes: { exclude: ['password_hash'] },
+    });
     expect(mockRequest.user).toEqual(mockUser);
     expect(nextFunction).toHaveBeenCalledTimes(1);
   });
@@ -62,7 +65,9 @@ describe('Auth Middleware (protect)', () => {
   test('should return 401 if no token is provided', async () => {
     await protect(mockRequest, mockResponse, nextFunction);
     expect(mockResponse.status).toHaveBeenCalledWith(401);
-    expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Not authorized, no token' });
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      message: 'Not authorized, no token',
+    });
     expect(nextFunction).not.toHaveBeenCalled();
   });
 
@@ -74,35 +79,41 @@ describe('Auth Middleware (protect)', () => {
 
     await protect(mockRequest, mockResponse, nextFunction);
     expect(mockResponse.status).toHaveBeenCalledWith(401);
-    expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Not authorized, token failed' });
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      message: 'Not authorized, token failed',
+    });
     expect(nextFunction).not.toHaveBeenCalled();
   });
 
   test('should return 401 if user is not found in DB', async () => {
     const token = 'valid.token.for.nonexistent.user';
     const decodedPayload = { id: 99 };
-    
+
     mockRequest.headers.authorization = `Bearer ${token}`;
     jwt.verify.mockReturnValue(decodedPayload);
     User.findByPk.mockResolvedValue(null);
 
     await protect(mockRequest, mockResponse, nextFunction);
     expect(mockResponse.status).toHaveBeenCalledWith(401);
-    expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Not authorized, user not found' });
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      message: 'Not authorized, user not found',
+    });
     expect(nextFunction).not.toHaveBeenCalled();
   });
 
   test('should return 401 if database lookup fails', async () => {
     const token = 'valid.token.db.error';
     const decodedPayload = { id: 1 };
-    
+
     mockRequest.headers.authorization = `Bearer ${token}`;
     jwt.verify.mockReturnValue(decodedPayload);
     User.findByPk.mockRejectedValue(new Error('Database error'));
 
     await protect(mockRequest, mockResponse, nextFunction);
     expect(mockResponse.status).toHaveBeenCalledWith(401);
-    expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Not authorized, token failed' });
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      message: 'Not authorized, token failed',
+    });
     expect(nextFunction).not.toHaveBeenCalled();
   });
-}); 
+});

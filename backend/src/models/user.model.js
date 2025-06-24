@@ -1,36 +1,46 @@
 // backend/src/models/user.model.js
 
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db.config.js'); // 引入我们统一的数据库连接实例
+const sequelize = require('../config/db.config.js');
 
-const User = sequelize.define('User', {
-  // 模型属性是根据你的数据库表字段定义的
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
+const User = sequelize.define(
+  'User',
+  {
+    // model attributes are defined based on the database table fields
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    user_name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true, // ensure the user_name is unique
+    },
+    password_hash: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    user_role: {
+      type: DataTypes.ENUM('admin', 'operator'),
+      allowNull: false,
+      defaultValue: 'operator', // New users default to operator
+    },
+    status: {
+      type: DataTypes.ENUM('active', 'pending', 'paused'),
+      allowNull: false,
+      defaultValue: 'pending', // New users must be approved by an admin
+    },
+    creation_time: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
   },
-  user_name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true // 确保用户名是唯一的
-  },
-  password_hash: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  user_role: {
-    type: DataTypes.ENUM('admin', 'operator'), // 角色只能是'admin'或'operator'
-    allowNull: false
-  },
-  creation_time: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
+  {
+    // model options
+    tableName: 'users', // explicitly specify the table name
+    timestamps: false, // we manually manage the creation_time, so disable Sequelize's automatic timestamp
   }
-}, {
-  // 模型选项
-  tableName: 'users', // 明确指定表名
-  timestamps: false // 我们手动管理了created_at，所以关闭Sequelize的自动时间戳
-});
+);
 
 module.exports = User;

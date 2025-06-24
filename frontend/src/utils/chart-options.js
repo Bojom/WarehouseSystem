@@ -1,6 +1,6 @@
 // frontend/src/utils/chart-options.js
 
-// 出入库趋势图的option构建函数
+// function to build the option for the trend chart
 export function createTrendChartOption(dates = [], inData = [], outData = []) {
   return {
     tooltip: { trigger: 'axis' },
@@ -18,30 +18,30 @@ export function createTrendChartOption(dates = [], inData = [], outData = []) {
         type: 'line',
         data: inData,
         smooth: true,
-        itemStyle: { color: '#67C23A' }
+        itemStyle: { color: '#67C23A' },
       },
       {
         name: '出库',
         type: 'line',
         data: outData,
         smooth: true,
-        itemStyle: { color: '#E6A23C' }
-      }
-    ]
-  };
+        itemStyle: { color: '#E6A23C' },
+      },
+    ],
+  }
 }
 
-// 库存占比饼图的option构建函数
+// function to build the option for the composition chart
 export function createCompositionChartOption(data = []) {
   return {
     tooltip: {
       trigger: 'item',
-      formatter: '{a} <br/>{b}: {c} ({d}%)'
+      formatter: '{a} <br/>{b}: {c} ({d}%)',
     },
     legend: {
       orient: 'vertical',
       left: 10,
-      data: data.map(item => item.name)
+      data: data.map((item) => item.name),
     },
     series: [
       {
@@ -51,41 +51,41 @@ export function createCompositionChartOption(data = []) {
         avoidLabelOverlap: false,
         label: {
           show: false,
-          position: 'center'
+          position: 'center',
         },
         emphasis: {
           label: {
             show: true,
             fontSize: '30',
-            fontWeight: 'bold'
-          }
+            fontWeight: 'bold',
+          },
         },
         labelLine: {
-          show: false
+          show: false,
         },
-        data: data
-      }
-    ]
-  };
+        data: data,
+      },
+    ],
+  }
 }
 
-export function createDefectChartOption(supplierNames = [], defectCounts = []) {
+export function createAnomalyChartOption(supplierNames = [], anomalyScores = []) {
   return {
     tooltip: {
       trigger: 'axis',
       axisPointer: {
-        type: 'shadow'
-      }
+        type: 'shadow',
+      },
     },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '3%',
-      containLabel: true
+      containLabel: true,
     },
     xAxis: {
       type: 'value',
-      boundaryGap: [0, 0.01]
+      boundaryGap: [0, 0.01],
     },
     yAxis: {
       type: 'category',
@@ -93,15 +93,15 @@ export function createDefectChartOption(supplierNames = [], defectCounts = []) {
     },
     series: [
       {
-        name: '缺陷数量',
+        name: '异常分数',
         type: 'bar',
-        data: defectCounts,
+        data: anomalyScores,
         itemStyle: {
-          color: '#F56C6C'
-        }
-      }
-    ]
-  };
+          color: '#F56C6C',
+        },
+      },
+    ],
+  }
 }
 
-// ... (未来可以添加更多图表的option构建函数)
+// ... (future: add more chart options)

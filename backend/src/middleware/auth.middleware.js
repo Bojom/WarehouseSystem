@@ -19,23 +19,23 @@ const protect = async (req, res, next) => {
 
   try {
     // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_secret_key');
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'your_default_secret_key'
+    );
 
-    // Find the user in the database
-    req.user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password_hash'] }
-    });
-    
-    // If user not found after decoding token, it's an invalid token situation
-    if (!req.user) {
-       return res.status(401).json({ message: 'Not authorized, user not found' });
-    }
+    // Attach the decoded payload directly to the request object.
+    // The payload already contains the necessary id, username, and role.
+    req.user = decoded;
+
+    // We can remove the DB call here for efficiency.
+    // If we needed to check if the user still exists in the DB on every request,
+    // we would do it here, but for this application, trusting the token is sufficient.
 
     next();
   } catch (error) {
     // This will catch errors from jwt.verify (e.g., invalid signature, expired token)
     // and any potential errors from the database lookup.
-    console.error('Authentication error:', error);
     return res.status(401).json({ message: 'Not authorized, token failed' });
   }
 };

@@ -1,42 +1,76 @@
 <template>
   <el-container class="main-layout">
-    <!-- 侧边栏 -->
-    <el-aside width="250px">
-      <div class="logo">EuroLink Technologie</div>
+    <!-- sidebar -->
+    <el-aside
+      :width="isCollapsed ? '64px' : '250px'"
+      class="sidebar"
+      @mouseenter="isCollapsed = false"
+      @mouseleave="isCollapsed = true"
+    >
+      <div class="logo">
+        <span v-if="!isCollapsed">EuroLink Technologie</span>
+        <span v-else>EL</span>
+      </div>
       <el-menu
         :default-active="$route.path"
         class="el-menu-vertical"
         router
+        :collapse="isCollapsed"
+        :collapse-transition="false"
       >
         <el-menu-item index="/dashboard">
           <el-icon><i-ep-data-analysis /></el-icon>
-          <span>仪表盘 (Dashboard)</span>
+          <template #title>
+            <span>仪表盘 (Dashboard)</span>
+          </template>
         </el-menu-item>
         <el-menu-item index="/inventory">
           <el-icon><i-ep-pie-chart /></el-icon>
-          <span>库存概览 (Inventory)</span>
+          <template #title>
+            <span>库存概览 (Inventory)</span>
+          </template>
         </el-menu-item>
         <el-menu-item index="/parts">
           <el-icon><i-ep-setting /></el-icon>
-          <span>配件管理 (Parts)</span>
+          <template #title>
+            <span>配件管理 (Parts)</span>
+          </template>
         </el-menu-item>
         <el-menu-item index="/stock-movement">
           <el-icon><i-ep-sort /></el-icon>
-          <span>出入库登记 (Stock Movement)</span>
+          <template #title>
+            <span>出入库登记 (Stock Movement)</span>
+          </template>
         </el-menu-item>
         <el-menu-item index="/records">
           <el-icon><i-ep-document /></el-icon>
-          <span>出入库记录 (Records)</span>
+          <template #title>
+            <span>出入库记录 (Records)</span>
+          </template>
         </el-menu-item>
         <el-menu-item index="/suppliers" v-if="userStore.isAdmin">
           <el-icon><i-ep-van /></el-icon>
-          <span>供应商管理 (Suppliers)</span>
+          <template #title>
+            <span>供应商管理 (Suppliers)</span>
+          </template>
+        </el-menu-item>
+        <el-menu-item index="/user-management" v-if="userStore.isAdmin">
+          <el-icon><i-ep-setting /></el-icon>
+          <template #title>
+            <span>用户管理 (User Management)</span>
+          </template>
+        </el-menu-item>
+        <el-menu-item index="/register" v-if="userStore.isAdmin">
+          <el-icon><i-ep-user /></el-icon>
+          <template #title>
+            <span>创建用户 (Create User)</span>
+          </template>
         </el-menu-item>
       </el-menu>
     </el-aside>
 
     <el-container>
-      <!-- 顶部栏 -->
+      <!-- top bar -->
       <el-header class="header">
         <div>面包屑导航 (Breadcrumb)</div>
         <div class="user-info">
@@ -45,7 +79,7 @@
         </div>
       </el-header>
 
-      <!-- 主内容区 -->
+      <!-- main content area -->
       <el-main>
         <RouterView />
       </el-main>
@@ -54,25 +88,26 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
-import { useUserStore } from '@/stores/user';
-import { onMounted } from 'vue';
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { onMounted, ref } from 'vue'
 
-const router = useRouter();
-const userStore = useUserStore();
+const router = useRouter()
+const userStore = useUserStore()
+const isCollapsed = ref(true)
 
 onMounted(() => {
   // Fetch user info when the layout is mounted
   // This ensures we have the role information
   if (!userStore.user) {
-    userStore.fetchUser();
+    userStore.fetchUser()
   }
-});
+})
 
 const handleLogout = () => {
-  userStore.logout();
-  router.push('/login');
-};
+  userStore.logout()
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -87,6 +122,8 @@ const handleLogout = () => {
   font-weight: bold;
   background-color: #001529;
   color: white;
+  white-space: nowrap; /* prevent text from wrapping */
+  overflow: hidden; /* hide the overflow */
 }
 .el-aside {
   background-color: #001529;
@@ -99,7 +136,8 @@ const handleLogout = () => {
 .el-menu-item {
   color: #fff;
 }
-.el-menu-item:hover, .el-menu-item.is-active {
+.el-menu-item:hover,
+.el-menu-item.is-active {
   background-color: #1890ff !important;
 }
 .header {
@@ -115,5 +153,9 @@ const handleLogout = () => {
 }
 .user-info span {
   margin-right: 15px;
+}
+.sidebar {
+  transition: width 0.3s;
+  background-color: #001529;
 }
 </style>

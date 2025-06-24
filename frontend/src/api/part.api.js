@@ -1,5 +1,5 @@
 // frontend/src/api/part.api.js
-import api from '@/utils/api';
+import api from '@/utils/api'
 
 /**
  * 获取配件列表（带分页和搜索）
@@ -7,8 +7,8 @@ import api from '@/utils/api';
  * @returns {Promise}
  */
 export const getParts = (params) => {
-  return api.get('/parts', { params });
-};
+  return api.get('/parts', { params })
+}
 
 /**
  * 创建新配件
@@ -16,8 +16,8 @@ export const getParts = (params) => {
  * @returns {Promise}
  */
 export const createPart = (partData) => {
-  return api.post('/parts', partData);
-};
+  return api.post('/parts', partData)
+}
 
 /**
  * 更新配件信息
@@ -26,8 +26,8 @@ export const createPart = (partData) => {
  * @returns {Promise}
  */
 export const updatePart = (id, partData) => {
-  return api.put(`/parts/${id}`, partData);
-};
+  return api.put(`/parts/${id}`, partData)
+}
 
 /**
  * 删除配件
@@ -35,8 +35,8 @@ export const updatePart = (id, partData) => {
  * @returns {Promise}
  */
 export const deletePart = (id) => {
-  return api.delete(`/parts/${id}`);
-};
+  return api.delete(`/parts/${id}`)
+}
 
 /**
  * 根据配件编号获取配件信息
@@ -44,5 +44,5 @@ export const deletePart = (id) => {
  * @returns {Promise}
  */
 export const getPartByNumber = (partNumber) => {
-  return api.get(`/parts/by-number/${partNumber}`);
-};
+  return api.get(`/parts/by-number/${partNumber}`)
+}

@@ -6,111 +6,185 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user.model.js');
 
 const { protect } = require('../middleware/auth.middleware.js');
+const { isAdmin } = require('../middleware/isAdmin.middleware.js');
 
 const router = express.Router();
 
-// 为了能解析请求体中的JSON数据，需要添加中间件
+// to parse the JSON data in the request body, we need to add the middleware
 router.use(express.json());
 
-// --- 注册接口 (POST /api/users/register) ---
-router.post('/register', async (req, res) => {
+// POST /api/users/register
+// This route is now protected and for admins only again.
+router.post('/register', protect, isAdmin, async (req, res) => {
   try {
     const { user_name, password, user_role } = req.body;
 
-    // 1. 对密码进行哈希加密
-    const salt = await bcrypt.genSalt(10); // 生成盐，增加密码复杂度
+    // Admin must specify a valid role
+    if (!['admin', 'operator'].includes(user_role)) {
+      return res.status(400).json({ message: 'Invalid user role specified.' });
+    }
+
+    // 1. hash the password
+    const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    // 2. 创建新用户
+    // 2. create a new user. Status will default to 'active' for admin-created users
+    // if we update the model default. Let's set it explicitly to be safe.
     const newUser = await User.create({
       user_name,
       password_hash,
-      user_role
+      user_role,
+      status: 'active', // Accounts created by admin are active immediately
     });
 
-    res.status(201).json({ message: 'User registered successfully', userId: newUser.id });
-
+    res.status(201).json({
+      message: 'User registered successfully.',
+      userId: newUser.id,
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error registering user', error: error.message });
+    // Handle potential unique constraint error
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ message: 'Username already exists.' });
+    }
+    res
+      .status(500)
+      .json({ message: 'Error registering user', error: error.message });
   }
 });
 
-// --- 登录接口 (POST /api/users/login) ---
+// POST /api/users/login
 router.post('/login', async (req, res) => {
   try {
     const { user_name, password } = req.body;
 
-    // 1. 查找用户
+    // 1. find the user
     const user = await User.findOne({ where: { user_name } });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // 2. 对比密码
+    // NEW: Check if the user's account is active
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        message: 'Account is not active. Please contact an administrator.',
+      });
+    }
+
+    // 2. compare the password
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // 3. 密码匹配，生成JWT
+    // 3. password matches, generate JWT
     const payload = {
       id: user.id,
       username: user.user_name,
-      role: user.user_role
+      role: user.user_role,
     };
 
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'your_default_secret_key', // 使用环境变量中的密钥
-      { expiresIn: '1h' } // 令牌有效期1小时
+      process.env.JWT_SECRET, // use the secret key from the environment variable
+      { expiresIn: '1h' } // token expires in 1 hour
     );
 
     res.json({
       message: 'Logged in successfully',
-      token: token
+      token: token,
     });
-
   } catch (error) {
     res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 });
 
-
-// --- 新增：获取用户个人信息的受保护路由 ---
 // GET /api/users/profile
 router.get('/profile', protect, async (req, res) => {
-  // 如果代码能执行到这里，说明 protect 中间件已经成功验证了 token
-  console.log("---------- /profile route hit! ----------"); // <--- 添加日志 #1
-  console.log("User from token (req.user):", req.user); // <--- 添加日志 #2
-
-  // 'req.user' 是由 protect 中间件从 token 中解码并附加到请求对象上的
+  // 'req.user' is added to the request object by the protect middleware from the token
   const userId = req.user.id;
 
   try {
-    // 为了安全，我们不直接返回 req.user (可能包含iat/exp等信息)
-    // 而是根据ID从数据库重新查找一次，并只返回必要的字段
+    // to be safe, we don't return req.user (which may contain iat/exp info)
+    // instead, we re-lookup the user by ID and only return the necessary fields
     const user = await User.findByPk(userId, {
-      attributes: ['id', 'user_name', 'user_role'] // 只选择这几个字段
+      attributes: ['id', 'user_name', 'user_role'], // only select these fields
     });
-
-    console.log("User found in DB:", user); // <--- 添加日志 #3
 
     if (user) {
       const userProfile = {
-          id: user.id,
-          username: user.user_name,
-          role: user.user_role
-      }
-      console.log("Sending user profile to frontend:", userProfile); // <--- 添加日志 #4
+        id: user.id,
+        username: user.user_name,
+        role: user.user_role,
+      };
       res.json({ userProfile });
     } else {
       res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
-    console.error("Error in /profile route:", error);
-    res.status(500).json({ message: 'Error fetching profile', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error fetching profile', error: error.message });
   }
 });
 
+// GET /api/users
+router.get('/', protect, isAdmin, async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'user_name', 'user_role', 'status', 'creation_time'],
+    });
+    res.json(users);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Failed to retrieve users.', error: error.message });
+  }
+});
+
+// PUT /api/users/:id/role
+router.put('/:id/role', protect, isAdmin, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['admin', 'operator'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role specified.' });
+    }
+    const [updated] = await User.update(
+      { user_role: role },
+      { where: { id: req.params.id } }
+    );
+    if (updated) {
+      res.status(200).json({ message: 'User role updated successfully.' });
+    } else {
+      res.status(404).json({ message: 'User not found.' });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Failed to update user role.', error: error.message });
+  }
+});
+
+// PUT /api/users/:id/status
+router.put('/:id/status', protect, isAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['active', 'pending', 'paused'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status specified.' });
+    }
+    const [updated] = await User.update(
+      { status: status },
+      { where: { id: req.params.id } }
+    );
+    if (updated) {
+      res.status(200).json({ message: 'User status updated successfully.' });
+    } else {
+      res.status(404).json({ message: 'User not found.' });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Failed to update user status.', error: error.message });
+  }
+});
 
 module.exports = router;

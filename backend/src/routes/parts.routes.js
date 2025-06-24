@@ -2,31 +2,19 @@
 
 const express = require('express');
 
-// --- ESPION INTERNE AU ROUTEUR ---
-console.log('✅ ROUTER [parts.routes.js] loading...');
-// ---------------------------------
-
 const router = express.Router();
-const { Op } = require('sequelize'); // 引入 Sequelize 的操作符，用于 LIKE 查询
+const { Op } = require('sequelize');
 const Part = require('../models/part.model');
-const Supplier = require('../models/supplier.model'); // 引入Supplier以便包含其信息
+const Supplier = require('../models/supplier.model');
 const { protect } = require('../middleware/auth.middleware');
-const Transaction = require('../models/transaction.model'); // 引入Transaction模型
-const sequelize = require('../config/db.config'); // 引入sequelize实例
+const { isAdmin } = require('../middleware/isAdmin.middleware');
+const Transaction = require('../models/transaction.model');
+const sequelize = require('../config/db.config');
 
-// Middleware to check if the user is an admin
-const isAdmin = (req, res, next) => {
-  if (req.user && req.user.user_role === 'admin') {
-    next();
-  } else {
-    res.status(403).json({ message: 'Forbidden: Admins only' });
-  }
-};
-
-// --- Appliquer la protection à toutes les routes des fournisseurs
+// Apply protection to all routes
 router.use(protect);
 
-// --- Création (Create) ---
+// --- Create ---
 // POST /api/parts
 router.post('/', isAdmin, async (req, res) => {
   try {
@@ -37,29 +25,32 @@ router.post('/', isAdmin, async (req, res) => {
       // 检查是哪个字段冲突
       const field = error.errors[0].path;
       const value = error.errors[0].value;
-      return res.status(409).json({ 
+      return res.status(409).json({
         message: `创建失败：${field} "${value}" 已经存在。`,
-        error: 'Unique constraint violation' 
+        error: 'Unique constraint violation',
       });
     }
-    // 对于其他类型的错误，返回通用错误
-    res.status(500).json({ message: '服务器内部错误 (Internal Server Error)', error: error.message });
+
+    res.status(500).json({
+      message: '服务器内部错误 (Internal Server Error)',
+      error: error.message,
+    });
   }
 });
 
 // --- 读取 (Read) ---
-// GET /api/parts - 获取配件列表（带搜索和分页）
+// GET /api/parts
 router.get('/', async (req, res) => {
   try {
     const { search, page = 1, pageSize = 10 } = req.query;
-    
+
     let whereCondition = {};
     if (search) {
       whereCondition = {
         [Op.or]: [
-          { part_name: { [Op.iLike]: `%${search}%` } }, // iLike 不区分大小写
-          { part_number: { [Op.iLike]: `%${search}%` } }
-        ]
+          { part_name: { [Op.iLike]: `%${search}%` } }, // iLike is case insensitive
+          { part_number: { [Op.iLike]: `%${search}%` } },
+        ],
       };
     }
 
@@ -68,32 +59,36 @@ router.get('/', async (req, res) => {
 
     const { count, rows } = await Part.findAndCountAll({
       where: whereCondition,
-      include: [{ // 关键：包含关联的供应商信息
-        model: Supplier,
-        attributes: ['id', 'supplier_name'] // Corrected from 'name' to 'supplier_name'
-      }],
+      include: [
+        {
+          // include the associated supplier information
+          model: Supplier,
+          attributes: ['id', 'supplier_name'], // Corrected from 'name' to 'supplier_name'
+        },
+      ],
       limit,
       offset,
-      order: [['part_name', 'ASC']]
+      order: [['part_name', 'ASC']],
     });
 
     res.json({
       totalItems: count,
       totalPages: Math.ceil(count / limit),
       currentPage: parseInt(page, 10),
-      parts: rows
+      parts: rows,
     });
-
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching parts', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error fetching parts', error: error.message });
   }
 });
 
-// GET /api/parts/by-number/:partNumber - 按编号查找单个配件
+// GET /api/parts/by-number/:partNumber
 router.get('/by-number/:partNumber', async (req, res) => {
   try {
-    const part = await Part.findOne({ 
-      where: { part_number: req.params.partNumber }
+    const part = await Part.findOne({
+      where: { part_number: req.params.partNumber },
     });
     if (part) {
       res.json(part);
@@ -101,15 +96,17 @@ router.get('/by-number/:partNumber', async (req, res) => {
       res.status(404).json({ message: 'Part not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching part by number', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error fetching part by number', error: error.message });
   }
 });
 
-// GET /api/parts/:id - 获取单个配件详情
+// GET /api/parts/:id
 router.get('/:id', async (req, res) => {
   try {
     const part = await Part.findByPk(req.params.id, {
-      include: [Supplier] // 包含完整的供应商信息
+      include: [Supplier], // include the complete supplier information
     });
     if (part) {
       res.json(part);
@@ -117,11 +114,13 @@ router.get('/:id', async (req, res) => {
       res.status(404).json({ message: 'Part not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching part', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error fetching part', error: error.message });
   }
 });
 
-// GET /api/parts/:id/history - 获取单个配件的出入库历史
+// GET /api/parts/:id/history
 router.get('/:id/history', protect, async (req, res) => {
   try {
     const partId = req.params.id;
@@ -151,28 +150,26 @@ router.get('/:id/history', protect, async (req, res) => {
 
     const results = await sequelize.query(query, {
       replacements: { days, partId },
-      type: sequelize.QueryTypes.SELECT
+      type: sequelize.QueryTypes.SELECT,
     });
 
-    // The data is already perfectly formatted. We just extract it into the arrays for ECharts.
-    const dates = results.map(row => row.report_date);
-    const inboundData = results.map(row => parseInt(row.inbound_total, 10));
-    const outboundData = results.map(row => parseInt(row.outbound_total, 10));
+    // We just extract the data into the arrays for ECharts.
+    const dates = results.map((row) => row.report_date);
+    const inboundData = results.map((row) => parseInt(row.inbound_total, 10));
+    const outboundData = results.map((row) => parseInt(row.outbound_total, 10));
 
     res.json({ dates, inboundData, outboundData });
-
   } catch (error) {
-    console.error(`Error fetching history for part ${req.params.id}:`, error);
     res.status(500).json({ message: 'Error fetching part history' });
   }
 });
 
-// --- 更新 (Update) ---
+// --- Update ---
 // PUT /api/parts/:id
 router.put('/:id', isAdmin, async (req, res) => {
   try {
     const [updated] = await Part.update(req.body, {
-      where: { id: req.params.id }
+      where: { id: req.params.id },
     });
     if (updated) {
       const updatedPart = await Part.findByPk(req.params.id);
@@ -181,16 +178,18 @@ router.put('/:id', isAdmin, async (req, res) => {
       res.status(404).json({ message: 'Part not found' });
     }
   } catch (error) {
-    res.status(400).json({ message: 'Error updating part', error: error.message });
+    res
+      .status(400)
+      .json({ message: 'Error updating part', error: error.message });
   }
 });
 
-// --- 删除 (Delete) ---
+// --- Delete ---
 // DELETE /api/parts/:id
 router.delete('/:id', isAdmin, async (req, res) => {
   try {
     const deleted = await Part.destroy({
-      where: { id: req.params.id }
+      where: { id: req.params.id },
     });
     if (deleted) {
       res.status(204).send(); // 204 No Content
@@ -198,9 +197,10 @@ router.delete('/:id', isAdmin, async (req, res) => {
       res.status(404).json({ message: 'Part not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting part', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error deleting part', error: error.message });
   }
 });
-
 
 module.exports = router;

@@ -1,5 +1,5 @@
 // frontend/src/api/supplier.api.js
-import api from '@/utils/api'; // 引入我们配置好的axios实例
+import api from '@/utils/api'
 
 /**
  * 获取所有供应商的列表
@@ -7,8 +7,8 @@ import api from '@/utils/api'; // 引入我们配置好的axios实例
  * @returns {Promise}
  */
 export const getSuppliers = (params) => {
-  return api.get('/supplier', { params });
-};
+  return api.get('/supplier', { params })
+}
 
 /**
  * 创建一个新的供应商
@@ -16,8 +16,8 @@ export const getSuppliers = (params) => {
  * @returns {Promise}
  */
 export const createSupplier = (data) => {
-  return api.post('/supplier', data);
-};
+  return api.post('/supplier', data)
+}
 
 /**
  * 更新一个已有的供应商
@@ -26,8 +26,8 @@ export const createSupplier = (data) => {
  * @returns {Promise}
  */
 export const updateSupplier = (id, data) => {
-  return api.put(`/supplier/${id}`, data);
-};
+  return api.put(`/supplier/${id}`, data)
+}
 
 /**
  * 删除一个供应商
@@ -35,5 +35,5 @@ export const updateSupplier = (id, data) => {
  * @returns {Promise}
  */
 export const deleteSupplier = (id) => {
-  return api.delete(`/supplier/${id}`);
-};
+  return api.delete(`/supplier/${id}`)
+}
