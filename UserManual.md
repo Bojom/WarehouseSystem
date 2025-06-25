@@ -14,7 +14,7 @@
 2. **输入凭据**: 在“用户名”和“密码”输入框中，输入由管理员分配给您的账户信息。
 3. **点击登录**: 点击蓝色的“登录/Login”按钮。
 
-![image-20250624164140832](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164140832.png)
+![Login page image-20250624164140832](./img/image-20250624164140832.png)
 
 如果凭据正确，系统将自动跳转到主操作界面——仪表盘。如果失败，页面会提示“用户名或密码错误”。
 
@@ -26,11 +26,11 @@
 
 仪表盘是您进入系统后看到的第一个页面，它提供了整个仓库状态的核心信息概览。
 
-![image-20250624164512461](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164512461.png)
+![image-20250624164512461](./img/image-20250624164512461.png)
 
-![image-20250624164557885](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164557885.png)
+![image-20250624164557885](./img/image-20250624164557885.png)
 
-![image-20250624164612018](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164612018.png)
+![image-20250624164612018](./img/image-20250624164612018.png)
 
 - **KPI卡片区 (顶部)**: 快速查看“配件种类总数”、“今日出入库次数”和“库存预警数量”等关键指标。
 - **出入库趋势图**: 以折线图的形式展示最近30天每天的出入库操作次数，帮助您分析业务趋势。
@@ -44,7 +44,7 @@
 
 在左侧导航栏点击“配件管理”，您可以对系统中的所有配件进行新增、查询、修改和删除操作。
 
-![image-20250624164640859](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164640859.png)
+![Parts Management image-20250624164640859](./img/image-20250624164640859.png)
 
 ### **3.1 新增配件 (仅限管理员)**
 
@@ -56,9 +56,9 @@
 
 4. 填写完毕后，点击 **“确定”** 按钮。系统会提示“配件新增成功！”。
 
-   ![image-20250624164805796](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164805796.png)
+   ![Parts added succesfully image-20250624164805796](./img/image-20250624164805796.png)
 
-![image-20250624164743730](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164743730.png)
+![image-20250624164743730](./img/image-20250624164743730.png)
 
 ### **3.2 修改配件 (仅限管理员)**
 
@@ -70,7 +70,7 @@
 
 4. 点击 **“确定”** 按钮保存更改。
 
-   ![image-20250624164850816](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164850816.png)
+   ![image-20250624164850816](./img/image-20250624164850816.png)
 
 ### **3.3 删除配件 (仅限管理员)**
 
@@ -82,7 +82,7 @@
 
 4. 点击 **“确定删除”** 按钮。配件将被永久删除。
 
-   ![image-20250624164916571](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624164916571.png)
+   ![image-20250624164916571](./img/image-20250624164916571.png)
 
 ### **3.4 查询与筛选**
 
@@ -97,7 +97,7 @@
 
 在左侧导航栏点击“出入库登记”，您可以记录每一次配件的出/入库以及报告异常操作。
 
-![image-20250624165113809](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624165113809.png)
+![image-20250624165113809](./img/image-20250624165113809.png)
 
 1. **选择操作类型**: 首先，选择本次操作是“入库”，“出库” 还是"异常上报"。
 2. **输入配件编号**: 在“配件编号”输入框中，输入您要操作的配件的编号，然后按回车键或将鼠标点击到别处。
@@ -113,7 +113,7 @@
 
 在左侧导航栏点击“出入库记录”，您可以查询详细的历史操作记录，并将其导出。
 
-![image-20250624165324657](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624165324657.png)
+![image-20250624165324657](./img/image-20250624165324657.png)
 
 ### **5.1 记录查询**
 
@@ -125,7 +125,7 @@
 
 设置好条件后，点击 **“查询”** 按钮，下方的表格将显示符合条件的结果。
 
-![image-20250624165411349](C:\Users\15801\AppData\Roaming\Typora\typora-user-images\image-20250624165411349.png)
+![image-20250624165411349](./img/image-20250624165411349.png)
 
 ### **5.2 导出Excel**
 

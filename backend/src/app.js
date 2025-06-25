@@ -14,7 +14,31 @@ const supplierRoutes = require('./routes/supplier.routes');
 // 2. 初始化 Express 应用
 const app = express();
 
-app.use(cors());
+// CORS Configuration
+const allowedOrigins = [
+  'http://localhost:5173', // Frontend dev server
+  'http://localhost:8080'  // Docker production-like server
+];
+        
+// In production, we'll get the trusted URL from an environment variable
+if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+        
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+    },
+  credentials: true,
+};
+        
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001; // 从.env文件读取端口，如果没有则使用3001

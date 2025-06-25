@@ -72,7 +72,7 @@
     <el-container>
       <!-- top bar -->
       <el-header class="header">
-        <div>面包屑导航 (Breadcrumb)</div>
+        <div> </div>
         <div class="user-info">
           <span>欢迎, {{ userStore.user?.user_name || '用户' }}</span>
           <el-button type="danger" plain @click="handleLogout">退出登录 (Logout)</el-button>

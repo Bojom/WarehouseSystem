@@ -11,19 +11,19 @@ services:
       - NODE_ENV=production
       - DB_HOST=db # 关键：使用服务名'db'作为主机名
       - DB_USER=postgres
-      - DB_PASSWORD=Kaiyue0121 # 生产环境应使用强密码
+      - DB_PASSWORD=${DB_PASSWORD} # 生产环境应使用强密码
       - DB_NAME=warehouse_system_db
       - DB_PORT=5432
-      - JWT_SECRET=Xz!94@qW&vB7
+      - JWT_SECRET=${JWT_SECRET}
       - PORT=3001
     command: >
       sh -c "
         echo 'Waiting for database to be healthy...' &&
-        node /app/src/scripts/syncDb.js &&
-        echo 'Database synced.' &&
-        node /app/src/scripts/seedAdmin.js &&
-        echo 'Admin user seeded.' &&
-        node /app/src/app.js
+        npm run db:migrate &&
+        echo 'Database migration complete.' &&
+        npm run db:seed:all &&
+        echo 'Database seeding complete.' &&
+        npm start
       "
     depends_on:
       db:
@@ -46,7 +46,7 @@ services:
     image: postgres:15-alpine # 直接使用官方的PostgreSQL镜像
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=Kaiyue0121 # 密码必须和backend的环境变量一致
+      - POSTGRES_PASSWORD=${DB_PASSWORD} # 密码必须和backend的环境变量一致
       - POSTGRES_DB=warehouse_system_db
     volumes:
       - postgres_data:/var/lib/postgresql/data # 数据持久化
