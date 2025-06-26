@@ -37,8 +37,8 @@ Make sure you have the following software installed on your system:
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/Bojom/EuroLink_WarehouseSystem.git
-cd EuroLink_WarehouseSystem
+git clone https://github.com/Bojom/WarehouseSystem.git
+cd WarehouseSystem
 ```
 
 ### 3. Environment Setup
