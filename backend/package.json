@@ -7,8 +7,9 @@
     "dev": "nodemon src/app.js",
     "test": "jest --runInBand --detectOpenHandles --forceExit",
     "format": "prettier --write \"src/**/*.{js,vue,css,md}\"",
-    "seed:admin": "node src/scripts/seedAdmin.js",
-    "db:sync": "node src/scripts/syncDb.js"
+    "db:migrate": "npx sequelize-cli db:migrate",
+    "db:seed:all": "npx sequelize-cli db:seed:all",
+    "db:reset": "npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all"
   },
   "keywords": [],
   "author": "",
